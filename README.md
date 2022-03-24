@@ -1,5 +1,7 @@
-#项目描述
-	本仓库包含一个电路算术模块识别框架及相关数据集，相关成果已发表在ICCAD21会议上。
+## 项目描述
+本仓库包含一个电路算术模块识别框架及相关数据集，相关成果已发表在ICCAD21会议上。
+
+[论文链接](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=9643581&casa_token=a1E7fmIbxtMAAAAA:Fln4hDURRPuHosM8tOYM7_SzGbzepm7IneoCh3k9dN3k0cDNgl7KABe9RmSRhY-UJ2YzuEhuYw&tag=1)
 
 ## 环境配置
 运行环境：Linux
