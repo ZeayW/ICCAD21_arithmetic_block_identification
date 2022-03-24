@@ -88,7 +88,6 @@ def oversample(g,options,in_dim):
     print("total number of nodes: ", g.num_nodes())
 
 
-
     if options.label == 'in':
         labels = g.ndata['label_i']
     elif options.label == 'out':
@@ -100,12 +99,9 @@ def oversample(g,options,in_dim):
     lowbit_mask = g.ndata['position']<=3
     # unlabel the nodes in muldiv
     no_muldiv_mask = labels.squeeze(-1)!=-1
-    print('no_mul',len(labels[no_muldiv_mask]))
     nodes = th.tensor(range(g.num_nodes()))
     nodes = nodes[no_muldiv_mask]
     labels = labels[no_muldiv_mask]
-    print(len(nodes))
-
     mask_pos = (labels ==1).squeeze(1)
 
     mask_neg = (labels == 0).squeeze(1)
@@ -119,7 +115,6 @@ def oversample(g,options,in_dim):
     ratio = float(neg_size) / float(pos_size)
     print("ratio=", ratio)
 
-
     pos_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
     neg_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
     pos_types = g.ndata['ntype'][pos_nodes]
@@ -132,7 +127,6 @@ def oversample(g,options,in_dim):
     print("train pos count:", pos_count)
     print("train neg count:", neg_count)
     rates = cal_ratios(neg_count, pos_count)
-    print(rates)
 
     train_nodes = pos_nodes.copy()
     train_nodes.extend(neg_nodes)
@@ -161,7 +155,6 @@ def oversample(g,options,in_dim):
                 train_nodes.extend(short_nodes[:int(short_len * min(1, ratio - 1))])
                 ratio -= 1
 
-    print("ratios:",ratios)
     return train_nodes,pos_count, neg_count
 
 
@@ -183,16 +176,16 @@ def preprocess(data_path,device,options):
     label2id = {}
     if os.path.exists(data_path) is False:
         os.makedirs(data_path)
-    train_data_file = os.path.join(data_path, 'boom.pkl')
-    val_data_file = os.path.join(data_path, 'rocket.pkl')
+    train_data_file = os.path.join(data_path, 'train.pkl')
+    val_data_file = os.path.join(data_path, 'test.pkl')
 
     # generate and save the test dataset if missing
     if os.path.exists(val_data_file) is False:
         print('Validation dataset does not exist. Generating validation dataset... ')
-        datapaths = ["../dc/rocket/implementation/"]
-        report_folders = ["../dc/rocket/report/"]
+        datapaths = [os.path.join(options.val_netlist_path,'implementation')]
+        report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset("Rocket",datapaths,report_folders,label2id)
+        dataset = Dataset(options.val_top,datapaths,report_folders,label2id)
         g = dataset.batch_graph
         with open(val_data_file,'wb') as f:
             pickle.dump(g,f)
@@ -200,10 +193,10 @@ def preprocess(data_path,device,options):
     # generate and save the train dataset if missing
     if os.path.exists(train_data_file) is False:
         print('Training dataset does not exist. Generating training dataset... ')
-        datapaths = ["../dc/boom/implementation/"]
-        report_folders = ["../dc/boom/report/"]
+        datapaths = [os.path.join(options.train_netlist_path, 'implementation')]
+        report_folders = [os.path.join(options.train_netlist_path, 'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset("BoomCore", datapaths, report_folders, label2id)
+        dataset = Dataset(options.train_top, datapaths, report_folders, label2id)
         g = dataset.batch_graph
         with open(train_data_file,'wb') as f:
             pickle.dump(g,f)
@@ -355,8 +348,8 @@ def validate(loader,label_name,device,model,Loss,beta,options):
             out_blocks = [b.to(device) for b in out_blocks]
 
             # get features
-            in_features = in_blocks[0].srcdata["f_input"]
-            out_features = out_blocks[0].srcdata["f_input"]
+            in_features = in_blocks[0].srcdata["ntype"]
+            out_features = out_blocks[0].srcdata["ntype"]
             # the central nodes are the dst_nodes of the final block
             output_labels = in_blocks[-1].dstdata[label_name].squeeze(1)
             total_num += len(output_labels)
@@ -401,7 +394,7 @@ def validate(loader,label_name,device,model,Loss,beta,options):
         F1_score = 2 * recall * precision / (recall + precision)
 
     print("\ttp:", tp, " fp:", fp, " fn:", fn, " tn:", tn, " precision:", round(precision, 3))
-    print("\tloss:{:  .3f}, acc:{:.3f}, recall:{:.3f}, F1 score:{:.3f}".format(loss, acc,recall, F1_score))
+    print("\tloss:{:.3f}, acc:{:.3f}, recall:{:.3f}, F1 score:{:.3f}".format(loss, acc,recall, F1_score))
 
     return [loss, acc,recall,precision,F1_score]
 
@@ -414,31 +407,33 @@ def train(options):
     # you can define your dataset file here
     data_path = options.datapath
     print(data_path)
-    train_data_file = os.path.join(data_path,'boom.pkl')
-    val_data_file = os.path.join(data_path,'rocket.pkl')
+    train_data_file = os.path.join(data_path,'train.pkl')
+    val_data_file = os.path.join(data_path,'test.pkl')
 
     # preprocess: generate dataset / initialize the model
     if options.preprocess :
         preprocess(data_path,device,options)
         return
-    print(options)
+
     # load the model
     options, model = load_model(device, options)
+    print('Hyperparameters are listed as follows:')
+    print(options)
+    print('The model architecture is shown as follow:')
     print(model)
-
     in_nlayers = options.in_nlayers if isinstance(options.in_nlayers,int) else options.in_nlayers[0]
     out_nlayers = options.out_nlayers if isinstance(options.out_nlayers,int) else options.out_nlayers[0]
 
-    label_name = 'label_o'
+    if options.label =='in':
+        label_name = 'label_i'
+    elif options.label == 'out':
+        label_name = 'label_o'
+    else:
+        print('Error: wrong label!')
+        exit()
     print("----------------Loading data----------------")
     with open(train_data_file,'rb') as f:
         train_g = pickle.load(f)
-        train_graphs = dgl.unbatch(train_g)
-        if options.train_percent == 1:
-            train_graphs = [train_graphs[3]]
-        else:
-            train_graphs = train_graphs[:int(options.train_percent)]
-        train_g = dgl.batch(train_graphs)
     with open(val_data_file,'rb') as f:
         val_g = pickle.load(f)
     print('Data successfully loaded!')
@@ -447,8 +442,10 @@ def train(options):
     train_nodes, pos_count, neg_count = oversample(train_g, options, options.in_dim)
 
     # initialize the data sampler
-    in_sampler = Sampler([None] * in_nlayers, include_dst_in_src=options.include)
-    out_sampler = Sampler([None] * out_nlayers + 1, include_dst_in_src=options.include)
+    in_nlayers = max(1,in_nlayers)
+    out_nlayers = max(1,out_nlayers)
+    in_sampler = Sampler([None] * in_nlayers, include_dst_in_src=False)
+    out_sampler = Sampler([None] * out_nlayers, include_dst_in_src=False)
 
     # split the validation set and test set
     if os.path.exists(os.path.join(options.datapath, 'val_nids.pkl')):
@@ -470,11 +467,7 @@ def train(options):
             pickle.dump(test_nids, f)
 
     # create dataloader for training/validate dataset
-    if options.sage:
-        graph_function = DAG2UDG
-        out_sampler.include_dst_in_src = True
-    else:
-        graph_function = get_reverse_graph
+    graph_function = get_reverse_graph
 
     # initialize the dataloaders
     traindataloader = MyNodeDataLoader(
@@ -547,8 +540,9 @@ def train(options):
             in_blocks = [b.to(device) for b in in_blocks]
             out_blocks = [b.to(device) for b in out_blocks]
             # get features
-            in_features = in_blocks[0].srcdata["f_input"]
-            out_features = out_blocks[0].srcdata["f_input"]
+            in_features = in_blocks[0].srcdata["ntype"]
+
+            out_features = out_blocks[0].srcdata["ntype"]
             # the central nodes are the dst_nodes of the final block
             output_labels = in_blocks[-1].dstdata[label_name].squeeze(1)
             total_num += len(output_labels)
@@ -569,8 +563,7 @@ def train(options):
             total_loss += train_loss.item() * len(output_labels)
             endtime = time()
             runtime += endtime - start_time
-
-            # count for the correctly predicted samples
+            # count the correctly predicted samples
             correct += (
                     predict_labels == output_labels
             ).sum().item()
@@ -621,9 +614,9 @@ def train(options):
         print("  validate:")
         val_loss, val_acc, val_recall, val_precision, val_F1_score = validate(valdataloader,label_name, device, model,
                                                                        Loss, beta,options)
-        # print("  test:")
-        # validate([testdataloader], label_name, device, model,
-        #          Loss, beta, options)
+        print("  test:")
+        validate(testdataloader, label_name, device, model,
+                 Loss, beta, options)
 
         # save the result of current epoch
         with open(os.path.join(options.model_saving_dir, 'res.txt'), 'a') as f:

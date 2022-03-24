@@ -145,6 +145,7 @@ class DcParser:
         return port in ("Y", "S", "SO", "CO", "C1", "Q", "QN")
 
     def parse_report(self,fname):
+        print('\t###  parsing the report file...')
         r"""
 
         parse the sythesis report to find information about the target arithmetic blocks (cells)
@@ -183,12 +184,16 @@ class DcParser:
             dp_target_blocks:
                 {block_name:(block_type,{input_port:position},{output_port:position})}
         """
+        if not os.path.exists(fname):
+            print('\tError: report file doest not exist!')
+            exit()
         with open(fname,'r') as f:
             text = f.read()
+        print('\treport file is read.')
         blocks  = text.split('Datapath Report for')
         blocks = blocks[1:]
         dp_target_blocks = {}
-
+        print('\tscanning the report file to find target blocks...')
         for block in blocks:
             block = block.split('Implementation Report')[0]
             block = block[:block.rfind('\n==============================================================================')]
@@ -227,8 +232,7 @@ class DcParser:
                     operants = expression.split('-')
                     for i,operant in enumerate(operants):
                         dp_target_blocks[block_name][1][operant] = 1 if i==0 else 2
-        print('dp_target_blocks',dp_target_blocks)
-
+        print('\tscanning is done! Found target blocks in report file: ',dp_target_blocks)
         return dp_target_blocks
 
     def parse_port_hier(
@@ -433,6 +437,7 @@ class DcParser:
         return port_info
 
     def parse_hier(self, fname,dp_target_blocks):
+        print('\t###  parsing the hierarchical netlist...')
         r"""
 
         parse the hierarchical netlist
@@ -445,10 +450,11 @@ class DcParser:
             target_blocks : dict
                 the information of the target  arithmetic blocks
         """
+        print('\tgenerating the abstract syntax tree...')
         target_blocks = {}
         ast, directives = parse([fname])
         args_to_update = {}
-        
+        print('\tsequentially parsing the modules in the generated abstract syntax tree to find the target blocks...')
         # parse the modules one by one
         for module in ast.description.definitions:
             
@@ -615,13 +621,12 @@ class DcParser:
                 #   we first parse the ports of the father module instance,
                 #   then we find the corresponding relationship between args of father instance and args of target_child cell ,and replace
 
-
+        print('\tparsing is done! Found the following target blocks:')
             #print(module.name,args_to_update)
-        # for module,cells in target_blocks.items():
-        #     print(module)
-        #     if cells is not None:
-        #         for cell in cells:
-        #             print(cell.cell_name,cell.instance_name,cell.ports)
+        for module,cells in target_blocks.items():
+            if cells is not None:
+                for cell in cells:
+                    print('\t\t',cell.cell_type, cell.cell_name,cell.instance_name)
 
         target_blocks = target_blocks[self.top_module]
         
@@ -645,7 +650,7 @@ class DcParser:
             edges:  list
                 the edges of the transformed DAG
         """
-
+        print('\t###  parsing the flatten netlist...')
         nodes: List[Tuple[str, Dict[str, str]]] = [
             ("1'b0", {"type": "1'b0"}),
             ("1'b1", {"type": "1'b1"}),
@@ -653,7 +658,7 @@ class DcParser:
         edges: List[
             Tuple[str, str, Dict[str, bool]]
         ] = []  # a list of (src, dst, {"is_reverted": is_reverted})
-
+        print('\tgenerating the abstract syntax tree...')
         ast, directives = parse([fname])
         index01 = [0,0]
         adder_inputs = set()
@@ -669,14 +674,14 @@ class DcParser:
         top_module = None
 
         positions = {}
-
+        print('\tsearching for the top module...')
         for module in ast.description.definitions:
             if module.name == self.top_module:
                 top_module = module
                 break
         assert top_module is not None, "top module {} not found".format(self.top_module)
-        print(len(top_module.items))
         # parse the information of each cell/block
+        print('\tsequentially parsing the modules in the generated abstract syntax tree label the ios of the target blocks...')
         for item in top_module.items:
             if type(item) != pyverilog.vparser.ast.InstanceList:
                 continue
@@ -766,7 +771,8 @@ class DcParser:
                         assert False
                 else:
                     ntype = mfunc
-
+                if 'DFF' in ntype and ntype not in ['DFF','DFFSSR','DFFAS']:
+                    ntype = 'DFF'
                 if 'AO' in ntype or 'OA' in ntype:
 
                     num_inputs = ntype[re.search('\d',ntype).start():]
@@ -835,7 +841,7 @@ class DcParser:
                 new_edges.append(edge)
         edges = new_edges
         print(
-            "#inputs:{}, #outputs:{}".format(len(adder_inputs), len(adder_outputs)),
+            "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(adder_inputs), len(adder_outputs)),
             flush=True,
         )
 
@@ -870,17 +876,17 @@ class DcParser:
                 n[1]['is_sub_input'] = 2
             else:
                 n[1]['is_sub_input'] = 0
-
-        print('num adder inputs:', len(adder_inputs))
-        print('num adder outputs:', len(adder_outputs))
-
-        print('num muldiv inputs1:', len(muldiv_inputs1))
-        print('num muldiv inputs2:', len(muldiv_inputs2))
-        print('num muldiv outputs:', len(multdiv_outputs))
-
-        print('num sub inputs1:', len(sub_inputs1))
-        print('num sub inputs2:', len(sub_inputs2))
-        print('num sub outputs:', len(sub_outputs))
+        #
+        # print('num adder inputs:', len(adder_inputs))
+        # print('num adder outputs:', len(adder_outputs))
+        #
+        # print('num muldiv inputs1:', len(muldiv_inputs1))
+        # print('num muldiv inputs2:', len(muldiv_inputs2))
+        # print('num muldiv outputs:', len(multdiv_outputs))
+        #
+        # print('num sub inputs1:', len(sub_inputs1))
+        # print('num sub inputs2:', len(sub_inputs2))
+        # print('num sub outputs:', len(sub_outputs))
 
         return nodes, edges
 
@@ -895,11 +901,11 @@ class DcParser:
         :return: (nodes:list, edges:list)
             return the nodes and edges of the transformed DAG
         """
-
+        print('--- Start parsing the netlist...')
         hier_vf, nonhier_vf = vfile_pair[0], vfile_pair[1]
         dp_target_blocks = self.parse_report(hier_report)
-        target_cells = self.parse_hier(hier_vf, dp_target_blocks)
-        nodes, edges = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks,target_cells=target_cells)
-
+        target_blocks = self.parse_hier(hier_vf, dp_target_blocks)
+        nodes, edges = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks,target_blocks=target_blocks)
+        print('--- Parsing is done!')
         return nodes,edges
 

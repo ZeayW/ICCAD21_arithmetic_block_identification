@@ -35,12 +35,12 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
 
     nodes, edges = parser.parse(vfile_pair,hier_report)
-
+    print('--- Transforming to dgl graph...')
     # build the dgl graph
     G = nx.DiGraph()
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
-
+    print('\tassign nid to each node')
     # assign an id to each node
     node2id = {}
     for n in nodes:
@@ -59,20 +59,20 @@ def parse_single_file(parser,vfile_pair,hier_report):
     position = th.zeros((len(node2id), 1), dtype=th.long)
 
     # collect the label information
+    print('\tlabel the nodes')
     for n in nodes:
         nid = node2id[n[0]]
-        if get_options().region:
-            is_adder[nid][0] = n[1]['is_adder']
-        else:
-            is_adder_input[nid][0] = n[1]["is_adder_input"]
-            is_adder_output[nid][0] = n[1]["is_adder_output"]
-            is_mul_input[nid][0] = n[1]["is_mul_input"]
-            is_mul_output[nid][0] = n[1]["is_mul_output"]
-            is_sub_input[nid][0] = n[1]["is_sub_input"]
-            is_sub_output[nid][0] = n[1]["is_sub_output"]
-            if n[1]["position"] is not None:
-                position[nid][0] = n[1]["position"][1]
 
+        is_adder_input[nid][0] = n[1]["is_adder_input"]
+        is_adder_output[nid][0] = n[1]["is_adder_output"]
+        is_mul_input[nid][0] = n[1]["is_mul_input"]
+        is_mul_output[nid][0] = n[1]["is_mul_output"]
+        is_sub_input[nid][0] = n[1]["is_sub_input"]
+        is_sub_output[nid][0] = n[1]["is_sub_output"]
+        if n[1]["position"] is not None:
+            position[nid][0] = n[1]["position"][1]
+
+    print('\tgenerate type-relative initial features')
     # collect the node type information
     ntype = th.zeros((len(node2id), get_options().in_dim), dtype=th.float)
     for n in nodes:
@@ -100,19 +100,18 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     graph.ndata["ntype"] = ntype
 
-    print('ntype:',ntype.shape)
-
     # add label information
-    graph.ndata['adder_i'] = is_adder_input
-    graph.ndata['adder_o'] = is_adder_output
-    graph.ndata['mul_i'] = is_mul_input
-    graph.ndata['mul_o'] = is_mul_output
-    graph.ndata['sub_i'] = is_sub_input
-    graph.ndata['sub_o'] = is_sub_output
+    graph.ndata['label_i'] = is_adder_input
+    graph.ndata['label_o'] = is_adder_output
+    # graph.ndata['mul_i'] = is_mul_input
+    # graph.ndata['mul_o'] = is_mul_output
+    # graph.ndata['sub_i'] = is_sub_input
+    # graph.ndata['sub_o'] = is_sub_output
 
     graph.edata["r"] = th.FloatTensor(is_reverted)
     graph.ndata['position'] = position
-
+    print('--- Transforming is done!')
+    print('Processing is Accomplished!')
     return graph
 
 
@@ -140,7 +139,7 @@ class Dataset(DGLDataset):
         for i,path in enumerate(self.data_paths):
             files = os.listdir(path)
             for v in files:
-                if not v.endswith('v') or v.split('.')[0].endswith('d10') or 'auto' in v:
+                if not v.endswith('v'):
                     continue
                 if v.startswith('hier'):
                     vname = v[5:-2]
