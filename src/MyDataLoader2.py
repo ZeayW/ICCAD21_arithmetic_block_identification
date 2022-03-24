@@ -20,7 +20,7 @@ from torch._six import int_classes as _int_classes
 from collections.abc import Mapping
 from random import randint,shuffle
 from typing import Iterator, Optional, Sequence, List, TypeVar, Generic, Sized
-from codes.options import get_options
+from options import get_options
 
 
 class Sampler(BlockSampler):
