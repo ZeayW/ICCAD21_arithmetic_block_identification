@@ -8,10 +8,10 @@
 
 Python环境创建：在根目录下执行如下命令：
 
-		conda env create -f dgl.yaml
+	conda env create -f dgl.yaml
 Python环境激活：
 
-		conda activate dgl
+	conda activate dgl
 
 ## 数据集生成
 输入：测试电路RTL Design文件（如verilog）
@@ -23,7 +23,7 @@ Python环境激活：
 2.	在dc/test目录下，修改dc.tcl文件，将第二行替换为 ‘set rtl “FILE” ’，其中FILE为实际设计文件名，同时将第四行替换为‘set top_module “MODULE” ’，其中MODULE为实际顶层模块名。
 3.	在dc/test目录下，启动design complier (dc)进行逻辑综合，命令如下：
 
-			./run.sh
+		./run.sh
 4.	切换到目录src，执行如下命令：
 
 		python train.py --val_netlist_path ../dc/test --val_top TOP --datapath PATH1 --preprocess 
