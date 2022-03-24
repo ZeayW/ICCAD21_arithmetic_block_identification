@@ -4,8 +4,10 @@
 ## 环境配置
 	运行环境：Linux
 	Python环境创建：在根目录下执行如下命令：
+
 		conda env create -f dgl.yaml
 	Python环境激活：
+
 		conda activate dgl
 
 ## 数据集生成
