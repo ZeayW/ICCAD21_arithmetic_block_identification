@@ -2,11 +2,12 @@
 	本仓库包含一个电路算术模块识别框架及相关数据集，相关成果已发表在ICCAD21会议上。
 
 ## 环境配置
-	运行环境：Linux
-	Python环境创建：在根目录下执行如下命令：
+运行环境：Linux
+
+Python环境创建：在根目录下执行如下命令：
 
 		conda env create -f dgl.yaml
-	Python环境激活：
+Python环境激活：
 
 		conda activate dgl
 
