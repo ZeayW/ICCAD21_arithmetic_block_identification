@@ -96,47 +96,32 @@ class PortInfo:
     portname: str
     argname: str
     argcomp: str
-    is_adder_input: bool
-    is_adder_output: bool
-    is_sub_input1: bool
-    is_sub_input2: bool
-    is_muldiv_output:bool
-    is_muldiv_input1: bool
-    is_muldiv_input2: bool
-    is_sub_output: bool
+    is_output: bool
+    is_input: bool
+
     input_comp: str
     output_comp: str
     arg_list: list
-    position:tuple
+
     flag_update:bool
     args_need_update:set
-    flag_mult:bool
+
     def __init__(self, portname,argname, argcomp):
         self.ptype = None
         self.portname = portname
         self.argname = argname
         self.argcomp = argcomp
-        self.is_adder_input = False
-        self.is_adder_output = False
-        self.is_sub_input1 = False
-        self.is_sub_input2 = False
-        self.is_muldiv_output =  False
-        self.is_muldiv_input1 = False
-        self.is_muldiv_input2 = False
-        self.is_sub_output = False
         self.arg_list = []
-        self.position = None
         self.flag_update = False
         self.args_need_update = set()
-        self.flag_mult = False
+
 class DcParser:
     def __init__(
-        self, top_module: str,adder_keywords: List[str], sub_keywords: List[str]
+        self, top_module: str, target_block,keywords: List[str]
     ):
         self.top_module = top_module
-        self.adder_keywords = adder_keywords
-        self.sub_keywords = sub_keywords
-        self.muldivs = []
+        self.target_block = target_block
+        self.keywords = keywords
 
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
@@ -198,6 +183,8 @@ class DcParser:
             block = block.split('Implementation Report')[0]
             block = block[:block.rfind('\n==============================================================================')]
             block_name = block.split('\n')[0].replace(' ','')
+            if '*' in block and '+' in block:
+                continue
             vars = block[block.rfind('=============================================================================='):]
             vars = vars.split('\n')[1:] # the vars in the datapath report, e.g., | I1    | PI   | Signed   | 9     |                                          |
 
@@ -206,16 +193,15 @@ class DcParser:
                 var = var.replace(' ','')
                 _,var_name,type,data_class,width,expression,_ =var.split('|')
                 var_types[var_name] = (type)
-                # find a mutiply operation
-                if '*' in expression :
-                    self.muldivs.append(block_name)
-                    dp_target_blocks[block_name] = dp_target_blocks.get(block_name, ( 'muldiv',{}, {}) )
+                # find a multiply operation
+                if self.target_block == 'mul' and '*' in expression:
+                    dp_target_blocks[block_name] = dp_target_blocks.get(block_name, ('mul', {}, {}))
                     # get the operants (inputs)
                     operants = expression.split('*')
                     for operant in operants:
                         dp_target_blocks[block_name][1][operant] = 2
                 # find an add operation
-                if '+' in expression and '-' not in expression:
+                if self.target_block == 'add' and '+' in expression and '-' not in expression:
                     dp_target_blocks[block_name] = dp_target_blocks.get(block_name, ('add', {}, {}))
                     # record the output port of the block
                     dp_target_blocks[block_name][2][var_name] = 1
@@ -224,7 +210,7 @@ class DcParser:
                     for operant in operants:
                         dp_target_blocks[block_name][1][operant] = 1
                 # find a subtract operation
-                if '-' in expression and '+' not in expression:
+                if  self.target_block == 'sub' and '-' in expression and '+' not in expression:
                     dp_target_blocks[block_name] = dp_target_blocks.get(block_name, ('sub', {}, {}))
                     # record the output port of the block
                     dp_target_blocks[block_name][2][var_name] = 1
@@ -267,7 +253,7 @@ class DcParser:
         return port_info
 
     def parse_port(
-        self, mcomp: str,target_cells: list,port: pyverilog.vparser.parser.Portlist,index01:list,dp_inputs:list,dp_outputs:list
+        self, mcomp: str,port: pyverilog.vparser.parser.Portlist,index01:list,dp_inputs:list,dp_outputs:list
     ) -> PortInfo:
         r"""
 
@@ -295,7 +281,6 @@ class DcParser:
         else:  # just to show there could be various types!
             argname = argname.__str__()
         argcomp = argname[: argname.rfind("_")]
-        position = None
 
         if argname == "1'b0" :
             argname = "{}_{}".format(argname,index01[0])
@@ -314,16 +299,8 @@ class DcParser:
         else:
             port_info.ptype = "fanin"
 
-        for muldiv in self.muldivs:
-            if muldiv in mcomp:
-                port_info.flag_mult = True
-                break
         is_target = False
-        for kw in self.adder_keywords:
-            if kw in mcomp :
-                is_target = True
-                break
-        for kw in self.sub_keywords:
+        for kw in self.keywords:
             if kw in mcomp :
                 is_target = True
                 break
@@ -336,99 +313,14 @@ class DcParser:
             # for cases that instance_name is not unique, e.g, have several add_x_1，each is instance of different cell,
             # in theses cases, mcomp contains both cell information and instance information
             cell_type = None
-            for module_info in target_cells:
-                if module_info.instance_name.lower() in mcomp.lower():
-                    module_ports = module_info.ports
-                    cell_type = module_info.cell_type
-                    break
-            if module_ports is None:
-                print('module_ports is none', mcomp, portname, argname)
-                return port_info
 
-            # get the position of the arg
-            for mport in module_ports.keys():
-                mport_args = module_ports[mport]
-                for i, arg in enumerate(mport_args):
-                    if arg.lower() in argname.lower():
-                        position = (mport, len(mport_args) - 1 - i)
-                        break
-
-            if position is None:
-                if "1'b0" in argname or "1'b1" in argname:
-                    return port_info
-                if re.match("n\d+$", argname) is not None:
-
-                    return port_info
-                print(mcomp)
-                print(portname, argname)
-                # print(module_ports)
-                # position = False
-                pos = argname.split('_')[-1]
-                if re.match('\d+$',pos) is None:
-                    position = ('E',0)
-                else:
-                    position = ('E', int(pos))
-
-            port_info.position = position
             # label the ouput wires
-            if self.is_output_port(portname) :
-                if len(dp_outputs) != 0 and position[0] not in dp_outputs.keys():
-                    return port_info
-
-                if cell_type == 'add':
-                    port_info.is_adder_output = True
-                elif cell_type == 'sub':
-                    port_info.is_sub_output = True
-                elif cell_type == 'muldiv':
-                    port_info.is_muldiv_output = True
-                else:
-                    print(cell_type)
-                    assert  False
-
+            if self.is_output_port(portname):
+                port_info.is_output = True
                 port_info.output_comp = mcomp
             # label the input wires
             else:
-                if len(dp_inputs) != 0 and position[0] not in dp_inputs.keys():
-                    return port_info
-                if cell_type == 'add':
-                    port_info.is_adder_input = True
-
-                elif cell_type == 'sub':
-                    if len(dp_inputs)!=0:
-
-                        sub_position = dp_inputs[position[0]]
-                        if sub_position == 1:
-                            port_info.is_sub_input1 = True
-                        else:
-                            port_info.is_sub_input2 = True
-
-                    else:
-                        if position[0] == 'A' :
-                            port_info.is_sub_input1 = True
-                        elif position[0] == 'B' :
-                            port_info.is_sub_input2 = True
-                        else:
-                            print(mcomp,position[0],port_info.portname)
-                            return port_info
-                elif cell_type == 'muldiv':
-                    if len(dp_inputs)!=0:
-                        sub_position = dp_inputs[position[0]]
-                        if sub_position == 1:
-                            port_info.is_muldiv_input1 = True
-                        else:
-                            port_info.is_muldiv_input2 = True
-
-                    else:
-                        if position[0] in ('I1','I2') :
-                            port_info.is_muldiv_input2 = True
-                        elif position[0] == 'I3' :
-                            port_info.is_muldiv_input1 = True
-                        else:
-                            print(mcomp,position[0],port_info.portname)
-                            return port_info
-                else:
-                    print(cell_type)
-                    assert False
+                port_info.is_input = True
                 port_info.input_comp = mcomp
 
         elif is_target and argcomp != mcomp:
@@ -436,207 +328,11 @@ class DcParser:
 
         return port_info
 
-    def parse_hier(self, fname,dp_target_blocks):
-        print('\t###  parsing the hierarchical netlist...')
+    def parse_nonhier(self, fname,dp_target_blocks):
         r"""
 
-        parse the hierarchical netlist
-
-        :param fname: str
-            netlist filepath
-        :param dp_target_blocks: {block}
-            a dictionary of the block information extracted by pase_report
-        :return:
-            target_blocks : dict
-                the information of the target  arithmetic blocks
-        """
-        print('\tgenerating the abstract syntax tree...')
-        target_blocks = {}
-        ast, directives = parse([fname])
-        args_to_update = {}
-        print('\tsequentially parsing the modules in the generated abstract syntax tree to find the target blocks...')
-        # parse the modules one by one
-        for module in ast.description.definitions:
-            
-            ios = {}
-            wires = {}
-            # parse the ios and wires of the current top module 
-            for sentence in module.children():
-                if type(sentence) == pyverilog.vparser.ast.Decl:
-                    
-                    for decl in sentence.children():
-                        name = decl.name
-                        if decl.width is None:
-                            high_bit, low_bit = 0, 0
-                        else:
-                            high_bit, low_bit = decl.width.children()
-                            high_bit,low_bit = int(high_bit.value),int(low_bit.value)
-                            if high_bit<low_bit:
-                                temp = high_bit
-                                high_bit = low_bit
-                                low_bit = temp
-                        # save the highest/lowest bit of each io / wire
-                        if type(decl) == pyverilog.vparser.ast.Input or type(decl) == pyverilog.vparser.ast.Output:
-                            ios[name] = (high_bit, low_bit)
-                        else:
-                            wires[name] = (high_bit, low_bit)
-                elif type(sentence) == pyverilog.vparser.ast.Wire:
-                    name = sentence.name
-                    wires[name] = (0,0)
-            
-            # parse each module/cell in the current top module
-            for item in module.items:
-                if type(item) != pyverilog.vparser.ast.InstanceList:
-                    continue
-                instance = item.instances[0]
-                # we extract the following parts:
-                # mcell: cell name in SAED, e.g. AND2X1
-                # mname: module name, e.g. ALU_DP_OP_J23_U233
-                mcell = instance.module 
-                mname = instance.name
-                mcomp = mname[:mname.rfind('_')]
-                ports = instance.portlist
-
-                if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout"):
-                    continue
-
-                # judge if the current module a target one (target arithemetic block) or not
-                is_target =  False
-                # find if the module'name contain specific keywords, if true, then it is a target module
-                for key_word in self.adder_keywords:
-                    if key_word in mcomp:
-                        cell_type = 'add'
-                        is_target = True
-                        break
-                for key_word in self.sub_keywords:
-                    if key_word in mcomp:
-                        cell_type = 'sub'
-                        is_target = True
-                        break
-                # find if the current module in the target_blocks list extracted from the report file,
-                # if true, then it is a target module
-                if dp_target_blocks.get(mname,None) is not None:
-                    cell_type = dp_target_blocks[mname][0]
-                    is_target = True
-
-                # parse the information of a target module
-                if is_target:
-                    module_info = ModuleInfo(mcell, cell_type.lower(), mname.lower())
-                    for word in mcell.split('_')[:-1]:
-                        if re.match('\d+$', word) is not None:
-                            module_info.index = int(word)
-                            break
-                    # parse the port information of the module
-                    for p in ports:
-                        port_info = self.parse_port_hier(ios, wires, p)
-                        # if some arg of the cell's port is input/output of the father module, then when the father module is instanced latter,
-                        # these args should be replaced with args of corresponding port of the father module instance
-                        # eg, in the following example, i1 should be replaced with w1 for cell add_x_1
-                        # eg, module ALU
-                        #       input [63:0] i1,
-                        #       ...
-                        #       CSR_inc add_x_1 (.A(i1),...)
-                        #       ...
-                        #     endmodule
-                        #     module Rocket
-                        #       ...
-                        #       ALU alu (.i1(w1),...)
-                        # we mantain the information of args that need to update in 'args_to_update':
-                        #               {father_module_name:{(cell_type,cell_name,portname):[args need to update]} }
-                        #   eg, {'ALU':{(CSR_inc,add_x_1,'A'):[i1]}}
-
-                        if port_info.flag_update:
-                            args_to_update[module.name] = args_to_update.get(module.name, {})
-                            port2update = (mcell, mname.lower(), port_info.portname)
-                            args_to_update[module.name][port2update] = args_to_update[module.name].get(port2update, [])
-                            for arg in port_info.args_need_update:
-                                args_to_update[module.name][port2update].append(arg)
-                        module_info.ports[port_info.portname] = port_info.arg_list
-                    
-                    # record the informaion of target blocks in the current top module
-                    target_blocks[module.name] = target_blocks.get(module.name, [])
-                    target_blocks[module.name].append(module_info)
-
-                # if there are some target blocks in the current top module
-                if target_blocks.get(mcell,None) is not None:
-                    # if some args of the target blocks need chain update latter, then we record them
-                    if args_to_update.get(mcell, None) is not None:
-                        ports2update = args_to_update[mcell]
-                        father_ports_info = {}
-                        for p in ports:
-                            father_ports_info[p.portname] = self.parse_port_hier(ios, wires, p)
-
-                        for (child_cell_name, child_instance_name,
-                             child_portname), child_args2update in ports2update.items():
-                            # find the portargs (arglist2update) of the child cell that need to update :
-                            # eg, child_cell_info = (cell_type='CSR_inc',instance_name='add_x_1', ports={'A':[i1_63,i1_62...i1_0],'S':[...]})
-                            #     arglist2update = child_cell_info.ports['A'] = [arg1_63,arg1_62...arg1_0]
-
-                            for cell_info in target_blocks[mcell]:
-                                if cell_info.cell_name == child_cell_name and child_instance_name in cell_info.instance_name :
-                                    arglist2update = cell_info.ports[child_portname]
-
-                                    # for every arg of args2update that needs to update, replace it with new arg
-                                    for argname in child_args2update:
-                                        #print("------ arg to update:",argname)
-                                        replace_port_info = father_ports_info[argname]
-                                        replace_arg_list = replace_port_info.arg_list
-                                        new_args = []
-                                        # print('replace portname',replace_port_info.portname)
-                                        # print('replace arg list',replace_arg_list)
-                                        if replace_port_info.flag_update:
-                                            args_to_update[module.name] = args_to_update.get(module.name,{})
-                                            port2update = (child_cell_name, child_instance_name, child_portname)
-                                            args_to_update[module.name][port2update] = args_to_update[module.name].get(
-                                                port2update, [])
-                                            for arg in replace_port_info.args_need_update:
-                                                args_to_update[module.name][port2update].append(arg)
-                                        # replace the args of the child port with new args of the corresponding father port
-                                        # print(arglist2update)
-                                        for arg in arglist2update:
-                                            if replace_port_info.portname in arg:
-                                                index = arg.split('_')[-1]
-                                                if re.match('\d+$', index) is not None:
-
-                                                    new_args.append(
-                                                        replace_arg_list[len(replace_arg_list) - 1 - int(index)])
-                                                else:
-                                                    new_args.append(replace_arg_list[0])
-                                            else:
-                                                new_args.append(arg)
-                                        cell_info.ports[child_portname] = new_args
-                                        arglist2update = new_args
-                                    #     print('new arglist:',cell_info.ports[child_portname])
-                                    # print('#############################################')
-                                    # print(cell_info.cell_type,cell_info.instance_name,cell_info.ports)
-
-                        args_to_update[mcell] = None
-
-                    for module_info in target_blocks[mcell]:
-                        module_info.instance_name = "{}_{}".format(mname,module_info.instance_name)
-                        target_blocks[module.name] = target_blocks.get(module.name, [])
-                        target_blocks[module.name].append(module_info)
-                    target_blocks[mcell] = None
-                # if we encounter a father module instance as above mentioned, eg, ALU alu (.i1(w1),...)
-                #   we first parse the ports of the father module instance,
-                #   then we find the corresponding relationship between args of father instance and args of target_child cell ,and replace
-
-        print('\tparsing is done! Found the following target blocks:')
-            #print(module.name,args_to_update)
-        for module,cells in target_blocks.items():
-            if cells is not None:
-                for cell in cells:
-                    print('\t\t',cell.cell_type, cell.cell_name,cell.instance_name)
-
-        target_blocks = target_blocks[self.top_module]
-        
-        return target_blocks
-
-    def parse_nonhier(self, fname,dp_target_blocks,target_blocks):
-        r"""
-        
         parse the non-hierarchical netlist with block information extracted from report and hier_netlist
-        
+
         :param fname: str
             nonhier netlist filepath
         :param dp_target_blocks: dict
@@ -661,19 +357,12 @@ class DcParser:
         print('\tgenerating the abstract syntax tree...')
         ast, directives = parse([fname])
         index01 = [0,0]
-        adder_inputs = set()
-        adder_outputs = set()
-        sub_inputs1 = set()
-        sub_inputs2 = set()
-        sub_outputs = set()
-        multdiv = set()
-        muldiv_inputs1 = set()
-        muldiv_inputs2 = set()
-        multdiv_outputs = set()
+        inputs = set()
+        outputs = set()
+
         buff_replace = {}
         top_module = None
 
-        positions = {}
         print('\tsearching for the top module...')
         for module in ast.description.definitions:
             if module.name == self.top_module:
@@ -717,32 +406,16 @@ class DcParser:
 
             # parse the port information
             for p in ports:
-                port_info = self.parse_port(mcomp, target_blocks,p,index01,dp_inputs,dp_outputs)
+                port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs)
                 if port_info.ptype == "fanin":
                     fanins.append(port_info)
                 elif port_info.ptype == "fanout":
                     fanouts.append(port_info)
 
-                if port_info.is_adder_input:
-                    adder_inputs.add(port_info.argname)
-                if port_info.is_adder_output:
-                    adder_outputs.add(port_info.argname)
-                if port_info.is_muldiv_output:
-                    multdiv_outputs.add(port_info.argname)
-                if port_info.is_muldiv_input1:
-                    muldiv_inputs1.add(port_info.argname)
-                if port_info.is_muldiv_input2:
-                    muldiv_inputs2.add(port_info.argname)
-                if port_info.is_sub_input1:
-                    sub_inputs1.add(port_info.argname)
-                if port_info.is_sub_input2:
-                    sub_inputs2.add(port_info.argname)
-                if port_info.is_sub_output:
-                    sub_outputs.add(port_info.argname)
-                if port_info.flag_mult:
-                    multdiv.add(port_info.argname)
-                if positions.get(port_info.argname,None) is None:
-                    positions[port_info.argname] = port_info.position
+                if port_info.is_output:
+                    outputs.add(port_info.argname)
+                if port_info.is_input:
+                    inputs.add(port_info.argname)
             if not fanouts:
                 item.show()
                 print("***** warning, the above gate has no fanout recognized! *****")
@@ -841,7 +514,7 @@ class DcParser:
                 new_edges.append(edge)
         edges = new_edges
         print(
-            "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(adder_inputs), len(adder_outputs)),
+            "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(inputs), len(outputs)),
             flush=True,
         )
 
@@ -855,27 +528,8 @@ class DcParser:
 
         # label the nodes
         for n in nodes:
-            n[1]["is_adder_input"] = n[0] in adder_inputs
-            n[1]["is_adder_output"] = n[0] in adder_outputs
-            n[1]["position"] = positions.get(n[0], None)
-            if n[0] in multdiv:
-                n[1]['is_adder_input'] = -1
-                n[1]['is_adder_output'] = -1
-            n[1]['is_mul_output'] = n[0] in multdiv_outputs
-            if n[0] in muldiv_inputs1:
-                n[1]['is_mul_input'] = 1
-            elif n[0] in muldiv_inputs2:
-                n[1]['is_mul_input'] = 2
-            else:
-                n[1]['is_mul_input'] = 0
-
-            n[1]['is_sub_output'] = n[0] in sub_outputs
-            if n[0] in sub_inputs1:
-                n[1]['is_sub_input'] = 1
-            elif n[0] in sub_inputs2:
-                n[1]['is_sub_input'] = 2
-            else:
-                n[1]['is_sub_input'] = 0
+            n[1]["is_input"] = n[0] in inputs
+            n[1]["is_output"] = n[0] in outputs
         #
         # print('num adder inputs:', len(adder_inputs))
         # print('num adder outputs:', len(adder_outputs))
@@ -904,8 +558,7 @@ class DcParser:
         print('--- Start parsing the netlist...')
         hier_vf, nonhier_vf = vfile_pair[0], vfile_pair[1]
         dp_target_blocks = self.parse_report(hier_report)
-        target_blocks = self.parse_hier(hier_vf, dp_target_blocks)
-        nodes, edges = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks,target_blocks=target_blocks)
+        nodes, edges = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks)
         print('--- Parsing is done!')
         return nodes,edges
 
