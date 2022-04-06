@@ -96,7 +96,6 @@ def oversample(g,options,in_dim):
     else:
         print("wrong label type")
         return
-    lowbit_mask = g.ndata['position']<=3
     # unlabel the nodes in muldiv
     no_muldiv_mask = labels.squeeze(-1)!=-1
     nodes = th.tensor(range(g.num_nodes()))
@@ -185,7 +184,7 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.val_netlist_path,'implementation')]
         report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.val_top,datapaths,report_folders,label2id)
+        dataset = Dataset(options.val_top,datapaths,report_folders,label2id,options.target_block,options.keywords)
         g = dataset.batch_graph
         with open(val_data_file,'wb') as f:
             pickle.dump(g,f)
@@ -196,7 +195,7 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.train_netlist_path, 'implementation')]
         report_folders = [os.path.join(options.train_netlist_path, 'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.train_top, datapaths, report_folders, label2id)
+        dataset = Dataset(options.train_top, datapaths, report_folders, label2id,options.target_block,options.keywords)
         g = dataset.batch_graph
         with open(train_data_file,'wb') as f:
             pickle.dump(g,f)
