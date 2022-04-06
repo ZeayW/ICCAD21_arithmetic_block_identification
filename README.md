@@ -26,8 +26,8 @@ Python环境激活：
 		./run.sh
 4.	切换到目录src，执行如下命令：
 
-		python train.py --val_netlist_path ../dc/test --val_top TOP --datapath PATH1 --preprocess 
-其中TOP是测试网表顶层模块名（e.g., BoomCore）。生成的数据集以pkl文件的形式存放在指定路径PATH1下。
+		python train.py --val_netlist_path ../dc/test --val_top TOP --datapath PATH1 --target_block TB --keywords k1 k2 ... --preprocess 
+其中TOP是测试网表顶层模块名（e.g., BoomCore），TB是目标算术块名：'mul'代表乘法器，'add'代表加法器。k1,k2... 是目标算术块实例关键字。生成的数据集以pkl文件的形式存放在指定路径PATH1下。
 	注：仓库中包含两个综合好的网表的例子boom/rocket，在根目录下的压缩包dc.zip中。
 	注：仓库中包含已经生成好的训练/测试数据集，在根目录下的压缩包dataset.zip中。
 ## 训练模型
