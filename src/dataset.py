@@ -49,28 +49,18 @@ def parse_single_file(parser,vfile_pair,hier_report):
             node2id[n[0]] = nid
 
     # init the label tensors
-    is_adder = th.zeros((len(node2id), 1), dtype=th.long)
-    is_adder_input = th.zeros((len(node2id), 1), dtype=th.long)
-    is_adder_output = th.zeros((len(node2id), 1), dtype=th.long)
-    is_mul_input = th.zeros((len(node2id), 1), dtype=th.long)
-    is_mul_output = th.zeros((len(node2id), 1), dtype=th.long)
-    is_sub_input = th.zeros((len(node2id), 1), dtype=th.long)
-    is_sub_output = th.zeros((len(node2id), 1), dtype=th.long)
-    position = th.zeros((len(node2id), 1), dtype=th.long)
+    is_input = th.zeros((len(node2id), 1), dtype=th.long)
+    is_output = th.zeros((len(node2id), 1), dtype=th.long)
+
 
     # collect the label information
     print('\tlabel the nodes')
     for n in nodes:
         nid = node2id[n[0]]
+        is_input[nid][0] = n[1]["is_adder_input"]
+        is_output[nid][0] = n[1]["is_adder_output"]
 
-        is_adder_input[nid][0] = n[1]["is_adder_input"]
-        is_adder_output[nid][0] = n[1]["is_adder_output"]
-        is_mul_input[nid][0] = n[1]["is_mul_input"]
-        is_mul_output[nid][0] = n[1]["is_mul_output"]
-        is_sub_input[nid][0] = n[1]["is_sub_input"]
-        is_sub_output[nid][0] = n[1]["is_sub_output"]
-        if n[1]["position"] is not None:
-            position[nid][0] = n[1]["position"][1]
+
 
     print('\tgenerate type-relative initial features')
     # collect the node type information
@@ -101,26 +91,22 @@ def parse_single_file(parser,vfile_pair,hier_report):
     graph.ndata["ntype"] = ntype
 
     # add label information
-    graph.ndata['label_i'] = is_adder_input
-    graph.ndata['label_o'] = is_adder_output
-    # graph.ndata['mul_i'] = is_mul_input
-    # graph.ndata['mul_o'] = is_mul_output
-    # graph.ndata['sub_i'] = is_sub_input
-    # graph.ndata['sub_o'] = is_sub_output
+    graph.ndata['label_i'] = is_input
+    graph.ndata['label_o'] = is_output
 
     graph.edata["r"] = th.FloatTensor(is_reverted)
-    graph.ndata['position'] = position
+
     print('--- Transforming is done!')
     print('Processing is Accomplished!')
     return graph
 
 
 class Dataset(DGLDataset):
-    def __init__(self, top_module,data_paths,report_folders,label2id):
+    def __init__(self, top_module,data_paths,report_folders,label2id,target_block,keywords):
         self.label2id =label2id
         self.data_paths = data_paths
         self.report_folders = report_folders
-        self.parser = DcParser(top_module,adder_keywords=['add_x','alu_DP_OP','div_DP_OP'],sub_keywords=['sub_x'])
+        self.parser = DcParser(top_module,target_block,keywords)
         super(Dataset, self).__init__(name="dac")
 
     def process(self):
