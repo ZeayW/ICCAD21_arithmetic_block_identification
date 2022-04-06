@@ -57,8 +57,8 @@ def parse_single_file(parser,vfile_pair,hier_report):
     print('\tlabel the nodes')
     for n in nodes:
         nid = node2id[n[0]]
-        is_input[nid][0] = n[1]["is_adder_input"]
-        is_output[nid][0] = n[1]["is_adder_output"]
+        is_input[nid][0] = n[1]["is_input"]
+        is_output[nid][0] = n[1]["is_output"]
 
 
 

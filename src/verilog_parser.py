@@ -114,7 +114,8 @@ class PortInfo:
         self.arg_list = []
         self.flag_update = False
         self.args_need_update = set()
-
+        self.is_output = False
+        self.is_input = False
 class DcParser:
     def __init__(
         self, top_module: str, target_block,keywords: List[str]
@@ -313,7 +314,6 @@ class DcParser:
             # for cases that instance_name is not unique, e.g, have several add_x_1，each is instance of different cell,
             # in theses cases, mcomp contains both cell information and instance information
             cell_type = None
-
             # label the ouput wires
             if self.is_output_port(portname):
                 port_info.is_output = True
@@ -357,8 +357,8 @@ class DcParser:
         print('\tgenerating the abstract syntax tree...')
         ast, directives = parse([fname])
         index01 = [0,0]
-        inputs = set()
-        outputs = set()
+        block_inputs = set()
+        block_outputs = set()
 
         buff_replace = {}
         top_module = None
@@ -403,7 +403,8 @@ class DcParser:
                     dp_inputs = dp_target_blocks[dp_cell][1]
                     dp_outputs = dp_target_blocks[dp_cell][2]
                     break
-
+            dp_inputs = []
+            dp_outputs = []
             # parse the port information
             for p in ports:
                 port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs)
@@ -413,9 +414,9 @@ class DcParser:
                     fanouts.append(port_info)
 
                 if port_info.is_output:
-                    outputs.add(port_info.argname)
+                    block_outputs.add(port_info.argname)
                 if port_info.is_input:
-                    inputs.add(port_info.argname)
+                    block_inputs.add(port_info.argname)
             if not fanouts:
                 item.show()
                 print("***** warning, the above gate has no fanout recognized! *****")
@@ -514,7 +515,7 @@ class DcParser:
                 new_edges.append(edge)
         edges = new_edges
         print(
-            "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(inputs), len(outputs)),
+            "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(block_inputs), len(block_outputs)),
             flush=True,
         )
 
@@ -528,8 +529,8 @@ class DcParser:
 
         # label the nodes
         for n in nodes:
-            n[1]["is_input"] = n[0] in inputs
-            n[1]["is_output"] = n[0] in outputs
+            n[1]["is_input"] = n[0] in block_inputs
+            n[1]["is_output"] = n[0] in block_outputs
         #
         # print('num adder inputs:', len(adder_inputs))
         # print('num adder outputs:', len(adder_outputs))

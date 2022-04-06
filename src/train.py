@@ -178,13 +178,17 @@ def preprocess(data_path,device,options):
     train_data_file = os.path.join(data_path, 'train.pkl')
     val_data_file = os.path.join(data_path, 'test.pkl')
 
+    if type(options.keywords) == str:
+        keywords = [options.keywords]
+    else:
+        keywords = options.keywords
     # generate and save the test dataset if missing
     if os.path.exists(val_data_file) is False:
         print('Validation dataset does not exist. Generating validation dataset... ')
         datapaths = [os.path.join(options.val_netlist_path,'implementation')]
         report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.val_top,datapaths,report_folders,label2id,options.target_block,options.keywords)
+        dataset = Dataset(options.val_top,datapaths,report_folders,label2id,options.target_block,keywords)
         g = dataset.batch_graph
         with open(val_data_file,'wb') as f:
             pickle.dump(g,f)
