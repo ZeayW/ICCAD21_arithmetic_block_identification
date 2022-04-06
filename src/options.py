@@ -35,6 +35,8 @@ def get_options(args=None):
     parser.add_argument('--val_top',type=str,help='the top module name of the validation netlist. Type: str',default='Rocket')
     parser.add_argument('--train_top',type=str, help='the top module name of the training netlist. Type: str',default='BoomCore')
     parser.add_argument('--predict_path',type=str,help='the directory used to save the prediction result. Type: str',default='../prediction/example')
+    parser.add_argument('--target_block',type=str,help='the target block to label. Type: str',default='add')
+    parser.add_argument('--keywords',type=str, nargs='+',help='the instance keyword of target block. Type: list(str)',default='add_x')
     options = parser.parse_args(args)
 
     return options
