@@ -403,7 +403,7 @@ class DcParser:
                     dp_inputs = dp_target_blocks[dp_cell][1]
                     dp_outputs = dp_target_blocks[dp_cell][2]
                     break
-            
+
             # parse the port information
             for p in ports:
                 port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs)
