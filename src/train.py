@@ -172,11 +172,31 @@ def preprocess(data_path,device,options):
         no return
     """
     print('----------------Preprocessing----------------')
-    label2id = {}
     if os.path.exists(data_path) is False:
         os.makedirs(data_path)
     train_data_file = os.path.join(data_path, 'train.pkl')
     val_data_file = os.path.join(data_path, 'test.pkl')
+    if not os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
+        ctype2id = {"1'b0": 0, "1'b1": 1, 'DFF': 2, 'DFFSSR': 3, 'DFFAS': 4,'NAND': 5, 'AND': 6,
+                    'OR': 7, 'DELLN': 8, 'INV': 9, 'NOR': 10, 'XOR': 11, 'MUX': 12, 'XNOR': 13,
+                    'MAJ': 14, 'PI': 15, 'NA': 16, 'NR': 17, 'OA': 18, 'AO': 19}
+        with open(os.path.join(data_path,'ctype2id.pkl'),'wb') as f:
+            pickle.dump(ctype2id,f)
+
+        # with open(train_data_file,'rb') as f:
+        #     train_g = pickle.load(f)
+        # with open(train_data_file,'wb') as f:
+        #     pickle.dump((ctype2id,train_g),f)
+        # with open(train_data_file,'rb') as f:
+        #     temp,train_g = pickle.load(f)
+        #     print(temp,train_g)
+        # with open(val_data_file,'rb') as f:
+        #     val_g = pickle.load(f)
+        # with open(val_data_file,'wb') as f:
+        #     pickle.dump((ctype2id,val_g),f)
+    else:
+        with open(os.path.join(data_path,'ctype2id.pkl'),'rb') as f:
+            ctype2id = pickle.load(f)
 
     if type(options.keywords) == str:
         keywords = [options.keywords]
@@ -188,10 +208,17 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.val_netlist_path,'implementation')]
         report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.val_top,datapaths,report_folders,label2id,options.target_block,keywords)
+        dataset = Dataset(options.val_top,datapaths,report_folders,ctype2id,options.target_block,keywords)
+
+        ctype2id = dataset.ctype2id
+        ntypes = len(ctype2id)
+        print(ctype2id)
+        with open(os.path.join(data_path,'ctype2id.pkl'),'wb') as f:
+            pickle.dump(ctype2id,f)
         g = dataset.batch_graph
-        with open(val_data_file,'wb') as f:
-            pickle.dump(g,f)
+        with open(val_data_file, 'wb') as f:
+            pickle.dump((ctype2id,g), f)
+
     print('Validation dataset is ready!')
     # generate and save the train dataset if missing
     if os.path.exists(train_data_file) is False:
@@ -199,14 +226,17 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.train_netlist_path, 'implementation')]
         report_folders = [os.path.join(options.train_netlist_path, 'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.train_top, datapaths, report_folders, label2id,options.target_block,options.keywords)
+        dataset = Dataset(options.train_top, datapaths, report_folders, ctype2id,options.target_block,options.keywords)
+
+        ctype2id = dataset.ctype2id
+        ntypes = len(ctype2id)
+        print(ctype2id)
+        with open(os.path.join(data_path, 'ctype2id.pkl'), 'wb') as f:
+            pickle.dump(ctype2id, f)
         g = dataset.batch_graph
-        with open(train_data_file,'wb') as f:
-            pickle.dump(g,f)
+        with open(train_data_file, 'wb') as f:
+            pickle.dump((ctype2id, g), f)
     print('Training dataset is ready!')
-    if len(label2id) != 0:
-        with open(os.path.join(data_path,'label2id.pkl'),'wb') as f:
-            pickle.dump(label2id,f)
 
     # initialize the bidirectional model
     print('Intializing models...')
@@ -217,11 +247,11 @@ def preprocess(data_path,device,options):
     # options.in_nlayers = 0 means no fanin model is used (that we only collect information from fanout direction)
     if options.in_nlayers!=0:
         model1 = network(
-            ntypes = options.in_dim,
+            ntypes = len(ctype2id),
             hidden_dim=options.hidden_dim,
             out_dim=options.out_dim,
             n_layers = options.in_nlayers,
-            in_dim = options.in_dim,
+            in_dim = len(ctype2id),
             dropout=options.gcn_dropout,
         )
         out_dim1 = model1.out_dim
@@ -234,11 +264,11 @@ def preprocess(data_path,device,options):
     # options.out_nlayers = 0 means no fanout model is used (that we only collect information from fanin direction)
     if options.out_nlayers!=0:
         model2 = network(
-            ntypes=options.in_dim,
+            ntypes=len(ctype2id),
             hidden_dim=options.hidden_dim,
             out_dim=options.out_dim,
             n_layers=options.out_nlayers,
-            in_dim=options.in_dim,
+            in_dim=len(ctype2id),
             dropout=options.gcn_dropout,
         )
         out_dim2 = model2.out_dim
@@ -402,6 +432,33 @@ def validate(loader,label_name,device,model,Loss,beta,options):
     return [loss, acc,recall,precision,F1_score]
 
 
+def load_data(data_path,latest_ctype2id):
+    with open(data_path,'rb') as f:
+        graph_ctype2id,graph = pickle.load(f)
+        graph_id2ctype = {}
+        for key,value in graph_ctype2id.items():
+            graph_id2ctype[value] = key
+        ntypes = len(graph_ctype2id)
+        graph_ntypes = graph.ndata['ntype'].shape[1]
+
+    latest_ntypes = len(latest_ctype2id)
+    if graph_ntypes < latest_ntypes:
+        updated_ntype = th.zeros((graph.number_of_nodes(), len(latest_ctype2id)), dtype=th.float)
+        for n in graph.nodes():
+            type_id = th.argmax(graph.ndata['ntype'][n])
+            type = graph_id2ctype[type_id.item()]
+            if latest_ctype2id.get(type,None) is None:
+                assert False, 'unknown cell type!'
+            else:
+                type_id = latest_ctype2id[type]
+            updated_ntype[n][type_id] = 1
+        graph.ndata['ntype'] = updated_ntype
+        with open(data_path, 'wb') as f:
+            pickle.dump((latest_ctype2id,graph),f)
+    elif graph_ntypes>ntypes:
+        assert False, 'too many cell types!'
+
+    return graph
 def train(options):
 
     th.multiprocessing.set_sharing_strategy('file_system')
@@ -410,6 +467,7 @@ def train(options):
     # you can define your dataset file here
     data_path = options.datapath
     print(data_path)
+    ctype2id_file = os.path.join(data_path,'ctype2id.pkl')
     train_data_file = os.path.join(data_path,'train.pkl')
     val_data_file = os.path.join(data_path,'test.pkl')
 
@@ -435,10 +493,13 @@ def train(options):
         print('Error: wrong label!')
         exit()
     print("----------------Loading data----------------")
-    with open(train_data_file,'rb') as f:
-        train_g = pickle.load(f)
-    with open(val_data_file,'rb') as f:
-        val_g = pickle.load(f)
+    if not os.path.exists(ctype2id_file) :
+        assert False, 'No ctype2id file! Please run the data generating procedure or copy a existed ctype2id file to the data path!'
+    else:
+        with open(ctype2id_file,'rb') as f:
+            ctype2id_file = pickle.load(f)
+    train_g = load_data(train_data_file,ctype2id_file)
+    val_g = load_data(val_data_file,ctype2id_file)
     print('Data successfully loaded!')
 
     # apply the over-samplying strategy to deal with data imbalance

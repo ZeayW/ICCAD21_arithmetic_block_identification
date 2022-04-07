@@ -37,6 +37,7 @@ class ABGNN(nn.Module):
         in_dim = hidden_dim
 
         self.conv = SAGEConv(
+            ntypes,
             hidden_dim,
             hidden_dim,
             include=False,

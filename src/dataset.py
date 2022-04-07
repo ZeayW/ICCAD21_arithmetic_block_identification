@@ -29,12 +29,9 @@ def parse_single_file(parser,vfile_pair,hier_report):
     """
 
     # gate types
-    label2id = {"1'b0": 0, "1'b1": 1, 'DFF': 2, 'DFFSSR': 3, 'DFFAS': 4, 'NAND': 5, 'AND': 6,
-                 'OR': 7, 'DELLN': 8, 'INV': 9, 'NOR': 10, 'XOR': 11, 'MUX': 12, 'XNOR': 13,
-                'MAJ': 14, 'PI': 15}
-
 
     nodes, edges = parser.parse(vfile_pair,hier_report)
+    ctype2id = parser.ctype2id
     print('--- Transforming to dgl graph...')
     # build the dgl graph
     G = nx.DiGraph()
@@ -64,15 +61,9 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     print('\tgenerate type-relative initial features')
     # collect the node type information
-    ntype = th.zeros((len(node2id), get_options().in_dim), dtype=th.float)
+    ntype = th.zeros((len(node2id), len(ctype2id)), dtype=th.float)
     for n in nodes:
-        nid = node2id[n[0]]
-        if label2id.get(n[1]['type']) is None:
-            print('new type', n[1]['type'])
-            if  'DFF' in n[1]['type']:
-                ntype[nid][2] = 1
-        else:
-            ntype[nid][label2id[n[1]["type"]]] = 1
+        ntype[nid][ctype2id[n[1]["type"]]] = 1
 
     src_nodes = []
     dst_nodes = []
@@ -98,15 +89,15 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     print('--- Transforming is done!')
     print('Processing is Accomplished!')
-    return graph
+    return graph,ctype2id
 
 
 class Dataset(DGLDataset):
-    def __init__(self, top_module,data_paths,report_folders,label2id,target_block,keywords):
-        self.label2id =label2id
+    def __init__(self, top_module,data_paths,report_folders,ctype2id,target_block,keywords):
+        self.ctype2id = ctype2id
         self.data_paths = data_paths
         self.report_folders = report_folders
-        self.parser = DcParser(top_module,target_block,keywords)
+        self.parser = DcParser(top_module,target_block,keywords,ctype2id)
         super(Dataset, self).__init__(name="dac")
 
     def process(self):
@@ -147,7 +138,8 @@ class Dataset(DGLDataset):
                 print("Processing file {}".format(vfile_pair[1]))
                 self.len += 1
                 # parse single file
-                graph = parse_single_file(self.parser, (hier_vf,vf), hier_report)
+                graph,ctype2id = parse_single_file(self.parser, (hier_vf,vf), hier_report)
+                self.ctype2id = ctype2id
 
                 self.graphs.append(graph)
 

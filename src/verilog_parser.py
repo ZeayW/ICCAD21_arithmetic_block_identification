@@ -118,11 +118,12 @@ class PortInfo:
         self.is_input = False
 class DcParser:
     def __init__(
-        self, top_module: str, target_block,keywords: List[str]
+        self, top_module: str, target_block,keywords: List[str],ctype2id,
     ):
         self.top_module = top_module
         self.target_block = target_block
         self.keywords = keywords
+        self.ctype2id = ctype2id
 
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
@@ -254,7 +255,7 @@ class DcParser:
         return port_info
 
     def parse_port(
-        self, mcomp: str,port: pyverilog.vparser.parser.Portlist,index01:list,dp_inputs:list,dp_outputs:list
+        self, mcomp: str,port: pyverilog.vparser.parser.Portlist,index01:list,dp_inputs:list,dp_outputs:list,flag
     ) -> PortInfo:
         r"""
 
@@ -295,7 +296,7 @@ class DcParser:
         if portname in ("CLK"):  # clock
             port_info.ptype = "CLK"
             return port_info
-        elif self.is_output_port(portname):
+        elif self.is_output_port(portname) or flag:
             port_info.ptype = "fanout"
         else:
             port_info.ptype = "fanin"
@@ -405,8 +406,12 @@ class DcParser:
                     break
 
             # parse the port information
-            for p in ports:
-                port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs)
+            num_port = len(ports)
+            flag_last = False
+            for idx,p in enumerate(ports):
+                if idx == num_port:
+                    flag_last = True
+                port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs,flag_last)
                 if port_info.ptype == "fanin":
                     fanins.append(port_info)
                 elif port_info.ptype == "fanout":
@@ -444,55 +449,26 @@ class DcParser:
                         assert False
                 else:
                     ntype = mfunc
-                if 'DFF' in ntype and ntype not in ['DFF','DFFSSR','DFFAS']:
+                if 'DFF' in ntype:
                     ntype = 'DFF'
-                if 'AO' in ntype or 'OA' in ntype:
-
-                    num_inputs = ntype[re.search('\d',ntype).start():]
-                    ntype1 = 'AND' if 'AO' in ntype else 'OR'
-                    ntype2 = 'OR' if 'AO' in ntype else 'AND'
-                    if 'I' in ntype:
-                        output_name = '{}_i'.format(fo.argname)
-                        nodes.append((output_name,{"type":ntype2}))
-                        nodes.append((fo.argname, {"type": 'INV'}))
-                        inputs[fo.argname] = [output_name]
+                pos = re.search("\d", mtype)
+                if pos:
+                    ntype = ntype[: pos.start()]
+                if ntype in ['INVD','BUFFD','BUFD','IBUFFD','NBUFFD']:
+                    ntype = ntype[:-1]
+                if ntype == 'IBUFF':
+                    ntype = 'INV'
+                if self.ctype2id.get(ntype,None) is None:
+                    id = len(self.ctype2id)
+                    self.ctype2id[ntype] = id
+                inputs[fo.argname] = inputs.get(fo.argname, [])
+                for fi in fanins:
+                    if ntype in ['NBUFF','BUF','BUFF']:
+                        buff_replace[fo.argname] = fi.argname
                     else:
-                        output_name = fo.argname
-                        nodes.append((output_name,{"type":ntype2}))
-                    inputs[output_name] = inputs.get(output_name,[])
-                    for i,num_input in enumerate(num_inputs):
-                        if num_input == '2':
-                            h_node_name = '{}_h{}'.format(fo.argname,i)
-                            nodes.append( (h_node_name,{"type":ntype1}) )
-                            inputs[h_node_name] = inputs.get(h_node_name,[])
-                            inputs[h_node_name].append(fanins[2*i].argname)
-                            inputs[h_node_name].append(fanins[2*i+1].argname)
-
-                            inputs[output_name].append(h_node_name)
-
-                        elif num_input =='1':
-                            inputs[output_name].append(fanins[2*i].argname)
-                        else:
-                            print(ntype,i,num_input)
-                            assert  False
-
-                else:
-                    pos = re.search("\d", mtype)
-                    if pos:
-                        ntype = ntype[: pos.start()]
-
-                    inputs[fo.argname] = inputs.get(fo.argname,[])
-                    for fi in fanins:
-
-                        if ntype == 'NBUFF':
-                            buff_replace[fo.argname] = fi.argname
-                        else:
-                            inputs[fo.argname].append(fi.argname)
-                    if ntype == 'IBUFF':
-                        ntype = 'INV'
-
-                    if buff_replace.get(fo.argname,None) is None:
-                        nodes.append((fo.argname, {"type": ntype}))
+                        inputs[fo.argname].append(fi.argname)
+                if buff_replace.get(fo.argname, None) is None:
+                    nodes.append((fo.argname, {"type": ntype}))
             # the edges represents the connection between the fanins and the fanouts
             for output,input in inputs.items():
 

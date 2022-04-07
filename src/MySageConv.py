@@ -11,6 +11,7 @@ from time import time
 class SAGEConv(nn.Module):
 
     def __init__(self,
+                 ntypes,
                  in_feats,          # the dim of input feature
                  out_feats,         # the dim of output
                  combine_type,      # the combine operator
@@ -34,7 +35,7 @@ class SAGEConv(nn.Module):
         self.combine_type = combine_type
 
         if include:self.fc_self = nn.Linear(self._in_dst_feats, out_feats, bias=bias)
-        else: self.fc_self = nn.Linear(get_options().in_dim,out_feats,bias=bias)
+        else: self.fc_self = nn.Linear(ntypes,out_feats,bias=bias)
         self.fc_neigh = nn.Linear(self._in_src_feats, out_feats, bias=bias)
 
     def forward(self,act_flag, graph, feat):
