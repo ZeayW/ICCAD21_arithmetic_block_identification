@@ -63,7 +63,9 @@ def parse_single_file(parser,vfile_pair,hier_report):
     # collect the node type information
     ntype = th.zeros((len(node2id), len(ctype2id)), dtype=th.float)
     for n in nodes:
+        nid = node2id[n[0]]
         ntype[nid][ctype2id[n[1]["type"]]] = 1
+        
 
     src_nodes = []
     dst_nodes = []
