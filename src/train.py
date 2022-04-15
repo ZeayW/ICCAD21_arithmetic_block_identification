@@ -237,7 +237,7 @@ def preprocess(data_path,device,options):
         with open(train_data_file, 'wb') as f:
             pickle.dump((ctype2id, g), f)
     print('Training dataset is ready!')
-
+    print(ctype2id)
     # initialize the bidirectional model
     print('Intializing models...')
     network = ABGNN
@@ -502,8 +502,9 @@ def train(options):
     val_g = load_data(val_data_file,ctype2id_file)
     print('Data successfully loaded!')
 
+    in_dim = len(ctype2id_file)
     # apply the over-samplying strategy to deal with data imbalance
-    train_nodes, pos_count, neg_count = oversample(train_g, options, options.in_dim)
+    train_nodes, pos_count, neg_count = oversample(train_g, options, in_dim)
 
     # initialize the data sampler
     in_nlayers = max(1,in_nlayers)
