@@ -15,7 +15,9 @@ for lr_rate in lr_rates:
                 continue
             for label in labels:
                 prefix = '{}/lr{}_in{}_out{}'.format(label,lr_rate,in_nlayer,out_nlayer)
-                model_saving_path = os.path.join(model_saving_dir,'prefix')
-                os.system("python train.py --label {} --datapath {} --model_saving_dir {} --in_nlayers {} --out_nlayers{} --preprocess"
+                model_saving_path = os.path.join(model_saving_dir,prefix)
+                os.system("python train.py --label {} --datapath {} --model_saving_dir {} --in_nlayers {} --out_nlayers {} --preprocess"
                           .format(label,datapath,model_saving_path,in_nlayer,out_nlayer))
-
+                os.system(
+                    "python train.py --label {} --datapath {} --model_saving_dir {} --in_nlayers {} --out_nlayers {}"
+                    .format(label, datapath, model_saving_path, in_nlayer, out_nlayer))
