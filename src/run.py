@@ -1,4 +1,4 @@
-
+import sys
 import os
 
 labels = ['out','in']
@@ -6,8 +6,8 @@ lr_rates = [1e-3, 3e-3, 3e-4]
 in_nlayers = [0,1,2,3,4,5]
 out_nlayers = [0,1,2,3,4,5]
 
-datapath = ''
-model_saving_dir = ''
+datapath = sys.argv[1]
+model_saving_dir = sys.argv[2]
 for lr_rate in lr_rates:
     for in_nlayer in in_nlayers:
         for out_nlayer in out_nlayers:
