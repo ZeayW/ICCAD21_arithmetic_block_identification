@@ -102,7 +102,6 @@ def oversample(g,options,in_dim):
     nodes = nodes[no_muldiv_mask]
     labels = labels[no_muldiv_mask]
     mask_pos = (labels ==1).squeeze(1)
-
     mask_neg = (labels == 0).squeeze(1)
     pos_nodes = nodes[mask_pos].numpy().tolist()
     neg_nodes = nodes[mask_neg].numpy().tolist()
@@ -113,6 +112,7 @@ def oversample(g,options,in_dim):
 
     ratio = float(neg_size) / float(pos_size)
     print("ratio=", ratio)
+
 
     pos_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
     neg_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
@@ -457,7 +457,7 @@ def load_data(data_path,latest_ctype2id):
             pickle.dump((latest_ctype2id,graph),f)
     elif graph_ntypes>ntypes:
         assert False, 'too many cell types!'
-
+    print(latest_ctype2id)
     return graph
 def train(options):
 
@@ -498,13 +498,39 @@ def train(options):
     else:
         with open(ctype2id_file,'rb') as f:
             ctype2id_file = pickle.load(f)
+    print('train ctypes:')
     train_g = load_data(train_data_file,ctype2id_file)
+    print('test ctypes:')
     val_g = load_data(val_data_file,ctype2id_file)
     print('Data successfully loaded!')
-
     in_dim = len(ctype2id_file)
     # apply the over-samplying strategy to deal with data imbalance
     train_nodes, pos_count, neg_count = oversample(train_g, options, in_dim)
+
+    if options.label == 'in':
+        labels = val_g.ndata['label_i']
+    elif options.label == 'out':
+        labels = val_g.ndata['label_o']
+    no_muldiv_mask = labels.squeeze(-1) != -1
+    nodes = th.tensor(range(val_g.num_nodes()))
+    nodes = nodes[no_muldiv_mask]
+    labels = labels[no_muldiv_mask]
+    mask_pos = (labels == 1).squeeze(1)
+    mask_neg = (labels == 0).squeeze(1)
+    pos_nodes = nodes[mask_pos].numpy().tolist()
+    neg_nodes = nodes[mask_neg].numpy().tolist()
+    shuffle(pos_nodes)
+    shuffle(neg_nodes)
+    pos_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
+    neg_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
+    pos_types = val_g.ndata['ntype'][pos_nodes]
+    neg_types = val_g.ndata['ntype'][neg_nodes]
+    pos_types = th.argmax(pos_types, dim=1)
+    neg_types = th.argmax(neg_types, dim=1)
+    type_count(pos_types, pos_count)
+    type_count(neg_types, neg_count)
+    print("test pos count:", pos_count)
+    print("test neg count:", neg_count)
 
     # initialize the data sampler
     in_nlayers = max(1,in_nlayers)
@@ -584,7 +610,7 @@ def train(options):
     print("----------------Start training---------------")
     pre_loss = 100
     stop_score = 0
-    max_F1_score = 0
+    max_recall = 0
 
     # start training
     for epoch in range(options.num_epoch):
@@ -648,15 +674,7 @@ def train(options):
             runtime += endtime-start_time
 
         Train_loss = total_loss / total_num
-        # early stop
-        if Train_loss > pre_loss:
-            stop_score += 1
-            if stop_score >= 2:
-                print('Early Stop!')
-                #exit()
-        else:
-            stop_score = 0
-            pre_loss = Train_loss
+
 
         # calculate accuracy, recall, precision and F1-score
         Train_acc = correct / total_num
@@ -691,9 +709,10 @@ def train(options):
                 round(val_recall, 3)) + " "+ str(round(val_precision,3))+" " + str(round(val_F1_score, 3)) + "\n")
             f.write('\n')
 
-        judgement = val_F1_score > max_F1_score
+        judgement = val_recall > max_recall
         if judgement:
-           max_F1_score = val_F1_score
+           stop_score = 0
+           max_recall = val_recall
            print("Saving model.... ", os.path.join(options.model_saving_dir))
            if os.path.exists(options.model_saving_dir) is False:
               os.makedirs(options.model_saving_dir)
@@ -701,6 +720,11 @@ def train(options):
               parameters = options
               pickle.dump((parameters, model), f)
            print("Model successfully saved")
+        else:
+            stop_score += 1
+            if stop_score >= 5:
+                print('Early Stop!')
+                exit()
 
 
 
