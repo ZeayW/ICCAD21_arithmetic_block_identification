@@ -125,6 +125,7 @@ def test(options):
    
     with open(test_data_file,'rb') as f:
         _,test_g = pickle.load(f)
+    print(test_g)
     print('Data successfully loaded!')
     in_nlayers = max(1, in_nlayers)
     out_nlayers = max(1, out_nlayers)
