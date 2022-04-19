@@ -37,6 +37,7 @@ def get_options(args=None):
     parser.add_argument('--predict_path',type=str,help='the directory used to save the prediction result. Type: str',default='../prediction/example')
     parser.add_argument('--target_block',type=str,help='the target block to label. Type: str',default='add')
     parser.add_argument('--keywords',type=str, nargs='+',help='the instance keyword of target block. Type: list(str)',default='add_x')
+    parser.add_argument('--test_id',type=int,default=0)
     options = parser.parse_args(args)
 
     return options

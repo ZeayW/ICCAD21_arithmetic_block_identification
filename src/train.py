@@ -175,7 +175,11 @@ def preprocess(data_path,device,options):
     if os.path.exists(data_path) is False:
         os.makedirs(data_path)
     train_data_file = os.path.join(data_path, 'train.pkl')
-    val_data_file = os.path.join(data_path, 'test.pkl')
+    if options.test_id ==0:
+        test_save_file = 'test.pkl'
+    else:
+        test_save_file = 'test_{}.pkl'.format(options.test_id)
+    val_data_file = os.path.join(data_path, test_save_file)
     if not os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
         ctype2id = {"1'b0": 0, "1'b1": 1, 'DFF': 2, 'DFFSSR': 3, 'DFFAS': 4,'NAND': 5, 'AND': 6,
                     'OR': 7, 'DELLN': 8, 'INV': 9, 'NOR': 10, 'XOR': 11, 'MUX': 12, 'XNOR': 13,

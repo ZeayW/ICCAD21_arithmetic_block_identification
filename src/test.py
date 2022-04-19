@@ -127,7 +127,11 @@ def test(options):
     predict_path = options.predict_path
     data_path = options.datapath
     print(data_path)
-    test_data_file = os.path.join(data_path,'test.pkl')
+    if options.test_id == 0:
+        test_save_file = 'test.pkl'
+    else:
+        test_save_file = 'test_{}.pkl'.format(options.test_id)
+    test_data_file = os.path.join(data_path,test_save_file)
     ctype2id_file = os.path.join(data_path, 'ctype2id.pkl')
     print(options)
     # load the model
