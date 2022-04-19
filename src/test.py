@@ -94,7 +94,33 @@ def load_model(device,options):
     return param,classifier
 
 
+def load_data(data_path,latest_ctype2id):
+    with open(data_path,'rb') as f:
+        graph_ctype2id,graph = pickle.load(f)
+        graph_id2ctype = {}
+        for key,value in graph_ctype2id.items():
+            graph_id2ctype[value] = key
+        ntypes = len(graph_ctype2id)
+        graph_ntypes = graph.ndata['ntype'].shape[1]
 
+    latest_ntypes = len(latest_ctype2id)
+    if graph_ntypes < latest_ntypes:
+        updated_ntype = th.zeros((graph.number_of_nodes(), len(latest_ctype2id)), dtype=th.float)
+        for n in graph.nodes():
+            type_id = th.argmax(graph.ndata['ntype'][n])
+            type = graph_id2ctype[type_id.item()]
+            if latest_ctype2id.get(type,None) is None:
+                assert False, 'unknown cell type!'
+            else:
+                type_id = latest_ctype2id[type]
+            updated_ntype[n][type_id] = 1
+        graph.ndata['ntype'] = updated_ntype
+        with open(data_path, 'wb') as f:
+            pickle.dump((latest_ctype2id,graph),f)
+    elif graph_ntypes>ntypes:
+        assert False, 'too many cell types!'
+    print(latest_ctype2id)
+    return graph
 def test(options):
     th.multiprocessing.set_sharing_strategy('file_system')
     device = th.device("cuda:"+str(options.gpu) if th.cuda.is_available() else "cpu")
@@ -102,7 +128,7 @@ def test(options):
     data_path = options.datapath
     print(data_path)
     test_data_file = os.path.join(data_path,'test.pkl')
-
+    ctype2id_file = os.path.join(data_path, 'ctype2id.pkl')
     print(options)
     # load the model
     options, model = load_model(device, options)
@@ -122,9 +148,13 @@ def test(options):
         print('Error: wrong label!')
         exit()
     print("----------------Loading data----------------")
-   
-    with open(test_data_file,'rb') as f:
-        _,test_g = pickle.load(f)
+    if not os.path.exists(ctype2id_file) :
+        assert False, 'No ctype2id file! Please run the data generating procedure or copy a existed ctype2id file to the data path!'
+    else:
+        with open(ctype2id_file,'rb') as f:
+            ctype2id_file = pickle.load(f)
+    print('test ctypes:')
+    test_g = load_data(test_data_file,ctype2id_file)
     print(test_g)
     print('Data successfully loaded!')
     in_nlayers = max(1, in_nlayers)
