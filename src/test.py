@@ -124,7 +124,7 @@ def test(options):
     print("----------------Loading data----------------")
    
     with open(test_data_file,'rb') as f:
-        test_g = pickle.load(f)
+        _,test_g = pickle.load(f)
     print('Data successfully loaded!')
     in_nlayers = max(1, in_nlayers)
     out_nlayers = max(1, out_nlayers)
