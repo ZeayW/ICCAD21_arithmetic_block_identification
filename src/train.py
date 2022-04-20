@@ -452,7 +452,11 @@ def load_data(data_path,latest_ctype2id):
             type_id = th.argmax(graph.ndata['ntype'][n])
             type = graph_id2ctype[type_id.item()]
             if latest_ctype2id.get(type,None) is None:
-                assert False, 'unknown cell type!'
+                latest_ctype2id[type] = len(latest_ctype2id)
+                print('unknown cell type, extend the ctype2id!')
+                with open(os.path.join(data_path,'ctype2id.pkl')) as f:
+                    pickle.dump(latest_ctype2id,f)
+                type_id = latest_ctype2id[type]
             else:
                 type_id = latest_ctype2id[type]
             updated_ntype[n][type_id] = 1
