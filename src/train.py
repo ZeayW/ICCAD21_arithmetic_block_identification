@@ -436,7 +436,9 @@ def validate(loader,label_name,device,model,Loss,beta,options):
     return [loss, acc,recall,precision,F1_score]
 
 
-def load_data(data_path,latest_ctype2id):
+def load_data(data_path,latest_ctype2id_file):
+    with open(latest_ctype2id_file, 'rb') as f:
+        latest_ctype2id = pickle.load(f)
     with open(data_path,'rb') as f:
         graph_ctype2id,graph = pickle.load(f)
         graph_id2ctype = {}
@@ -454,8 +456,6 @@ def load_data(data_path,latest_ctype2id):
             if latest_ctype2id.get(type,None) is None:
                 latest_ctype2id[type] = len(latest_ctype2id)
                 print('unknown cell type, extend the ctype2id!')
-                with open(os.path.join(data_path,'ctype2id.pkl')) as f:
-                    pickle.dump(latest_ctype2id,f)
                 type_id = latest_ctype2id[type]
             else:
                 type_id = latest_ctype2id[type]
@@ -466,6 +466,9 @@ def load_data(data_path,latest_ctype2id):
     elif graph_ntypes>ntypes:
         assert False, 'too many cell types!'
     print(latest_ctype2id)
+    with open(latest_ctype2id_file, 'wb') as f:
+        pickle.dump(latest_ctype2id,f)
+
     return graph
 def train(options):
 
@@ -503,9 +506,7 @@ def train(options):
     print("----------------Loading data----------------")
     if not os.path.exists(ctype2id_file) :
         assert False, 'No ctype2id file! Please run the data generating procedure or copy a existed ctype2id file to the data path!'
-    else:
-        with open(ctype2id_file,'rb') as f:
-            ctype2id_file = pickle.load(f)
+
     print('train ctypes:')
     train_g = load_data(train_data_file,ctype2id_file)
     print('test ctypes:')
