@@ -448,17 +448,19 @@ def load_data(data_path,latest_ctype2id_file):
         graph_ntypes = graph.ndata['ntype'].shape[1]
 
     latest_ntypes = len(latest_ctype2id)
+
     if graph_ntypes < latest_ntypes:
-        updated_ntype = th.zeros((graph.number_of_nodes(), len(latest_ctype2id)), dtype=th.float)
         for n in graph.nodes():
             type_id = th.argmax(graph.ndata['ntype'][n])
             type = graph_id2ctype[type_id.item()]
             if latest_ctype2id.get(type,None) is None:
                 latest_ctype2id[type] = len(latest_ctype2id)
                 print('unknown cell type, extend the ctype2id!')
-                type_id = latest_ctype2id[type]
-            else:
-                type_id = latest_ctype2id[type]
+        updated_ntype = th.zeros((graph.number_of_nodes(), len(latest_ctype2id)), dtype=th.float)
+        for n in graph.nodes():
+            type_id = th.argmax(graph.ndata['ntype'][n])
+            type = graph_id2ctype[type_id.item()]
+            type_id = latest_ctype2id[type]
             updated_ntype[n][type_id] = 1
         graph.ndata['ntype'] = updated_ntype
         with open(data_path, 'wb') as f:
