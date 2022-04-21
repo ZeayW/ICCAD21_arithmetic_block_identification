@@ -471,7 +471,7 @@ def load_data(data_path,latest_ctype2id_file):
     with open(latest_ctype2id_file, 'wb') as f:
         pickle.dump(latest_ctype2id,f)
 
-    in_dim = len(latest_ctype2id_file)
+    in_dim = len(latest_ctype2id)
     return graph,in_dim
 def train(options):
 
