@@ -171,6 +171,8 @@ def test(options):
     # create dataloader for training/validate dataset
     graph_function = get_reverse_graph
 
+    print(test_g.ndata['ntype'].shape,model.GCN1.in_dim,model.GCN1.ntypes)
+    exit()
     testdataloader = MyNodeDataLoader(
         True,
         test_g,
@@ -202,7 +204,7 @@ def test(options):
             # get in input features
             in_input_features = in_blocks[0].srcdata["ntype"]
             out_input_features = out_blocks[0].srcdata["ntype"]
-
+            #print(in_input_features.shape,model.GNN1)
             # the central nodes are the output of the final block
             output_labels = in_blocks[-1].dstdata[label_name].squeeze(1)
             total_num += len(output_labels)
