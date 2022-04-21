@@ -171,7 +171,7 @@ def test(options):
     # create dataloader for training/validate dataset
     graph_function = get_reverse_graph
 
-    print(test_g.ndata['ntype'].shape,model.GCN1.in_dim,model.GCN1.ntypes)
+    print(test_g.ndata['ntype'].shape,model.GCN1.in_dim)
     exit()
     testdataloader = MyNodeDataLoader(
         True,
