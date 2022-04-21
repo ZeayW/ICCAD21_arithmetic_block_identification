@@ -471,7 +471,8 @@ def load_data(data_path,latest_ctype2id_file):
     with open(latest_ctype2id_file, 'wb') as f:
         pickle.dump(latest_ctype2id,f)
 
-    return graph
+    in_dim = len(latest_ctype2id_file)
+    return graph,in_dim
 def train(options):
 
     th.multiprocessing.set_sharing_strategy('file_system')
@@ -510,11 +511,11 @@ def train(options):
         assert False, 'No ctype2id file! Please run the data generating procedure or copy a existed ctype2id file to the data path!'
 
     print('train ctypes:')
-    train_g = load_data(train_data_file,ctype2id_file)
+    train_g,in_dim = load_data(train_data_file,ctype2id_file)
     print('test ctypes:')
-    val_g = load_data(val_data_file,ctype2id_file)
+    val_g,in_dim = load_data(val_data_file,ctype2id_file)
     print('Data successfully loaded!')
-    in_dim = len(ctype2id_file)
+
     # apply the over-samplying strategy to deal with data imbalance
     train_nodes, pos_count, neg_count = oversample(train_g, options, in_dim)
 
