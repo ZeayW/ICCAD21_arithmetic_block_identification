@@ -500,9 +500,8 @@ class DcParser:
         # print('num sub inputs1:', len(sub_inputs1))
         # print('num sub inputs2:', len(sub_inputs2))
         # print('num sub outputs:', len(sub_outputs))
-        print(self.cell_types)
+        #print(self.cell_types)
         print(self.ntypes)
-        exit()
         return nodes, edges
 
     def parse(self,vfile_pair,hier_report):
