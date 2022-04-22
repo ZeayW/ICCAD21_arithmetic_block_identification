@@ -186,7 +186,7 @@ def preprocess(data_path,device,options):
             ctype2id = pickle.load(f)
 
     else:
-        ctype2id = {}
+        ctype2id = {"1'b0":0,"1'b1":1,'PI':2}
 
     if type(options.keywords) == str:
         keywords = [options.keywords]
