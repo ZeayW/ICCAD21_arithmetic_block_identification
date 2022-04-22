@@ -456,6 +456,9 @@ class DcParser:
                 pos = re.search("\d", mcell)
                 if pos:
                     ntype = ntype[: pos.start()]
+                if ntype=='':
+                    print(mcell)
+                    exit()
                 self.ntypes.add(ntype)
 
                 if ntype in ['INVD','BUFFD','BUFD','IBUFFD','NBUFFD']:
