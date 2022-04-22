@@ -120,6 +120,7 @@ def oversample(g,options,in_dim):
     neg_types = g.ndata['ntype'][neg_nodes]
     pos_types = th.argmax(pos_types, dim=1)
     neg_types = th.argmax(neg_types, dim=1)
+    print(th.max(pos_types),th.max(neg_types),len(pos_count),len(neg_count),in_dim)
     type_count(pos_types, pos_count)
     type_count(neg_types, neg_count)
 
@@ -180,27 +181,12 @@ def preprocess(data_path,device,options):
     else:
         test_save_file = 'test_{}.pkl'.format(options.test_id)
     val_data_file = os.path.join(data_path, test_save_file)
-    if not os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
-        ctype2id = {"1'b0": 0, "1'b1": 1, 'DFF': 2, 'DFFSSR': 3, 'DFFAS': 4,'NAND': 5, 'AND': 6,
-                    'OR': 7, 'DELLN': 8, 'INV': 9, 'NOR': 10, 'XOR': 11, 'MUX': 12, 'XNOR': 13,
-                    'MAJ': 14, 'PI': 15, 'NA': 16, 'NR': 17, 'OA': 18, 'AO': 19}
-        with open(os.path.join(data_path,'ctype2id.pkl'),'wb') as f:
-            pickle.dump(ctype2id,f)
-
-        # with open(train_data_file,'rb') as f:
-        #     train_g = pickle.load(f)
-        # with open(train_data_file,'wb') as f:
-        #     pickle.dump((ctype2id,train_g),f)
-        # with open(train_data_file,'rb') as f:
-        #     temp,train_g = pickle.load(f)
-        #     print(temp,train_g)
-        # with open(val_data_file,'rb') as f:
-        #     val_g = pickle.load(f)
-        # with open(val_data_file,'wb') as f:
-        #     pickle.dump((ctype2id,val_g),f)
-    else:
-        with open(os.path.join(data_path,'ctype2id.pkl'),'rb') as f:
+    if os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
+        with open(os.path.join(data_path, 'ctype2id.pkl'), 'rb') as f:
             ctype2id = pickle.load(f)
+
+    else:
+        ctype2id = {}
 
     if type(options.keywords) == str:
         keywords = [options.keywords]
@@ -709,9 +695,9 @@ def train(options):
         print("  validate:")
         val_loss, val_acc, val_recall, val_precision, val_F1_score = validate(valdataloader,label_name, device, model,
                                                                        Loss, beta,options)
-        print("  test:")
-        validate(testdataloader, label_name, device, model,
-                 Loss, beta, options)
+        # print("  test:")
+        # validate(testdataloader, label_name, device, model,
+        #          Loss, beta, options)
 
         # save the result of current epoch
         with open(os.path.join(options.model_saving_dir, 'res.txt'), 'a') as f:

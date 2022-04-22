@@ -130,7 +130,7 @@ class DcParser:
         return not self.is_output_port(port)
 
     def is_output_port(self, port: str) -> bool:
-        return port in ("Y", "S", "Q", "QN","ZN",'Z')
+        return port in ("Y", "S", "Q", "QN","ZN",'Z','CO','CON')
 
     def parse_report(self,fname):
         print('\t###  parsing the report file...')
@@ -294,7 +294,7 @@ class DcParser:
 
         port_info = PortInfo(portname, argname, argcomp)
 
-        if portname in ("CLK"):  # clock
+        if portname in ["CLK","CLOCK"]:  # clock
             port_info.ptype = "CLK"
             return port_info
         elif self.is_output_port(portname) or flag:
@@ -433,50 +433,25 @@ class DcParser:
             for fo in fanouts:
                 # the nodes are the fanouts of cells
                 # do some replacement, replace some of the cell to some fix cell type, e.g., AO221 -> AND + OR
-                # if mfunc == "HADD":
-                #     if fo.portname == "SO":
-                #         ntype = 'XOR'
-                #     elif fo.portname == "C1":
-                #         ntype = 'AND'
-                #     else:
-                #         print(fo.portname)
-                #         assert False
-                # elif mfunc == "FADD":
-                #     if fo.portname == "S":
-                #         ntype = 'XOR'
-                #     elif fo.portname == "CO":
-                #         ntype = 'MAJ'
-                #     else:
-                #         print(fo.portname)
-                #         assert False
-                # else:
-                #     ntype = mfunc
-                # if 'DFF' in ntype:
-                #     ntype = 'DFF'
+
                 ntype = mcell
                 pos = re.search("\d", mcell)
                 if pos:
                     ntype = ntype[: pos.start()]
                 if ntype=='':
                     print(mcell)
+                    assert False
 
                 self.ntypes.add(ntype)
 
-                if ntype in ['INVD','BUFFD','BUFD','IBUFFD','NBUFFD']:
-                    ntype = ntype[:-1]
-                if ntype == 'IBUFF':
-                    ntype = 'INV'
                 if self.ctype2id.get(ntype,None) is None:
                     id = len(self.ctype2id)
                     self.ctype2id[ntype] = id
                 inputs[fo.argname] = inputs.get(fo.argname, [])
                 for fi in fanins:
-                    if ntype in ['NBUFF','BUF','BUFF']:
-                        buff_replace[fo.argname] = fi.argname
-                    else:
-                        inputs[fo.argname].append(fi.argname)
-                if buff_replace.get(fo.argname, None) is None:
-                    nodes.append((fo.argname, {"type": ntype}))
+                    inputs[fo.argname].append(fi.argname)
+                #if buff_replace.get(fo.argname, None) is None:
+                nodes.append((fo.argname, {"type": ntype}))
             # the edges represents the connection between the fanins and the fanouts
             for output,input in inputs.items():
 
