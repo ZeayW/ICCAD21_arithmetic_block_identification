@@ -442,6 +442,8 @@ class DcParser:
                     print(mcell)
                     assert False
 
+                if ntype.startswith('CK'):
+                    ntype = ntype[2:]
                 self.ntypes.add(ntype)
 
                 if self.ctype2id.get(ntype,None) is None:
