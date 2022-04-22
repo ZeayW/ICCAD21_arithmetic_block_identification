@@ -119,6 +119,7 @@ def load_data(data_path,latest_ctype2id):
             pickle.dump((latest_ctype2id,graph),f)
     elif graph_ntypes>ntypes:
         assert False, 'too many cell types!'
+
     print(latest_ctype2id)
     return graph
 def test(options):
@@ -172,7 +173,7 @@ def test(options):
     graph_function = get_reverse_graph
 
     print(test_g.ndata['ntype'].shape,model.GCN1.in_dim)
-    exit()
+
     testdataloader = MyNodeDataLoader(
         True,
         test_g,
