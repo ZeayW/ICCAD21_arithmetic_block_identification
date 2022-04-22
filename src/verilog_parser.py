@@ -433,32 +433,33 @@ class DcParser:
             for fo in fanouts:
                 # the nodes are the fanouts of cells
                 # do some replacement, replace some of the cell to some fix cell type, e.g., AO221 -> AND + OR
-                if mfunc == "HADD":
-                    if fo.portname == "SO":
-                        ntype = 'XOR'
-                    elif fo.portname == "C1":
-                        ntype = 'AND'
-                    else:
-                        print(fo.portname)
-                        assert False
-                elif mfunc == "FADD":
-                    if fo.portname == "S":
-                        ntype = 'XOR'
-                    elif fo.portname == "CO":
-                        ntype = 'MAJ'
-                    else:
-                        print(fo.portname)
-                        assert False
-                else:
-                    ntype = mfunc
-                if 'DFF' in ntype:
-                    ntype = 'DFF'
+                # if mfunc == "HADD":
+                #     if fo.portname == "SO":
+                #         ntype = 'XOR'
+                #     elif fo.portname == "C1":
+                #         ntype = 'AND'
+                #     else:
+                #         print(fo.portname)
+                #         assert False
+                # elif mfunc == "FADD":
+                #     if fo.portname == "S":
+                #         ntype = 'XOR'
+                #     elif fo.portname == "CO":
+                #         ntype = 'MAJ'
+                #     else:
+                #         print(fo.portname)
+                #         assert False
+                # else:
+                #     ntype = mfunc
+                # if 'DFF' in ntype:
+                #     ntype = 'DFF'
+                ntype = mcell
                 pos = re.search("\d", mcell)
                 if pos:
                     ntype = ntype[: pos.start()]
                 if ntype=='':
                     print(mcell)
-                    exit()
+
                 self.ntypes.add(ntype)
 
                 if ntype in ['INVD','BUFFD','BUFD','IBUFFD','NBUFFD']:
