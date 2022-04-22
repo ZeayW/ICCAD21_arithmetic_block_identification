@@ -124,12 +124,12 @@ class DcParser:
         self.target_block = target_block
         self.keywords = keywords
         self.ctype2id = ctype2id
-
+        self.ntypes = set()
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
 
     def is_output_port(self, port: str) -> bool:
-        return port in ("Y", "S", "SO", "CO", "C1", "Q", "QN")
+        return port in ("Y", "S", "SO", "CO", "C1", "Q", "QN","ZN")
 
     def parse_report(self,fname):
         print('\t###  parsing the report file...')
@@ -392,6 +392,7 @@ class DcParser:
             if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout"):
                 continue
 
+            self.ntypes.add(mcell)
             # fanins / fanouts the the cell
             fanins: List[PortInfo] = []
             fanouts: List[PortInfo] = []
@@ -517,7 +518,8 @@ class DcParser:
         # print('num sub inputs1:', len(sub_inputs1))
         # print('num sub inputs2:', len(sub_inputs2))
         # print('num sub outputs:', len(sub_outputs))
-
+        print(self.ntypes)
+        exit()
         return nodes, edges
 
     def parse(self,vfile_pair,hier_report):
