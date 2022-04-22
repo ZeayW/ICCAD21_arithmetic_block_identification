@@ -124,6 +124,7 @@ class DcParser:
         self.target_block = target_block
         self.keywords = keywords
         self.ctype2id = ctype2id
+        self.cell_types = set()
         self.ntypes = set()
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
@@ -392,7 +393,7 @@ class DcParser:
             if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout"):
                 continue
 
-            self.ntypes.add(mcell)
+            self.cell_types.add(mcell)
             # fanins / fanouts the the cell
             fanins: List[PortInfo] = []
             fanouts: List[PortInfo] = []
@@ -452,9 +453,11 @@ class DcParser:
                     ntype = mfunc
                 if 'DFF' in ntype:
                     ntype = 'DFF'
-                pos = re.search("\d", mtype)
+                pos = re.search("\d", mcell)
                 if pos:
                     ntype = ntype[: pos.start()]
+                self.ntypes.add(ntype)
+
                 if ntype in ['INVD','BUFFD','BUFD','IBUFFD','NBUFFD']:
                     ntype = ntype[:-1]
                 if ntype == 'IBUFF':
@@ -518,6 +521,7 @@ class DcParser:
         # print('num sub inputs1:', len(sub_inputs1))
         # print('num sub inputs2:', len(sub_inputs2))
         # print('num sub outputs:', len(sub_outputs))
+        print(self.cell_types)
         print(self.ntypes)
         exit()
         return nodes, edges
