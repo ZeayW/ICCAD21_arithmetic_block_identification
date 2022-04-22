@@ -444,6 +444,8 @@ class DcParser:
 
                 if ntype.startswith('CK'):
                     ntype = ntype[2:]
+                elif ntype.startswith('BUFF'):
+                    ntype = 'BUFF'
                 self.ntypes.add(ntype)
 
                 if self.ctype2id.get(ntype,None) is None:
