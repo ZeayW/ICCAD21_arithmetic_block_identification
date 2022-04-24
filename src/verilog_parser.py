@@ -130,7 +130,7 @@ class DcParser:
         return not self.is_output_port(port)
 
     def is_output_port(self, port: str) -> bool:
-        return port in ("Y", "S", "Q", "QN","ZN",'Z','CO','CON')
+        return port in ("Y", "S", "Q", "QN","ZN",'Z','CO','CON','SN')
 
     def parse_report(self,fname):
         print('\t###  parsing the report file...')
