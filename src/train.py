@@ -181,12 +181,17 @@ def preprocess(data_path,device,options):
     else:
         test_save_file = 'test_{}.pkl'.format(options.test_id)
     val_data_file = os.path.join(data_path, test_save_file)
-    if os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
-        with open(os.path.join(data_path, 'ctype2id.pkl'), 'rb') as f:
-            ctype2id = pickle.load(f)
-
-    else:
-        ctype2id = {"1'b0":0,"1'b1":1,'PI':2}
+    # if os.path.exists(os.path.join(data_path,'ctype2id.pkl')):
+    #     with open(os.path.join(data_path, 'ctype2id.pkl'), 'rb') as f:
+    #         ctype2id = pickle.load(f)
+    #
+    # else:
+    #     ctype2id = {"1'b0":0,"1'b1":1,'PI':2}
+    #
+    assert os.path.exists('../data/cell_lib.pkl'), 'cell lib pickle does not exists in {}, Run parse_cell_lib.py first!'\
+                                                                .format('../data/cell_lib.pkl')
+    with open('../data/cell_lib.pkl','rb') as f:
+        cell_info_map = pickle.load(f)
 
     if type(options.keywords) == str:
         keywords = [options.keywords]
@@ -198,16 +203,17 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.val_netlist_path,'implementation')]
         report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.val_top,datapaths,report_folders,ctype2id,options.target_block,keywords)
+        dataset = Dataset(options.val_top,datapaths,report_folders,cell_info_map,
+                          options.target_block,keywords)
 
-        ctype2id = dataset.ctype2id
-        ntypes = len(ctype2id)
-        print(ctype2id)
-        with open(os.path.join(data_path,'ctype2id.pkl'),'wb') as f:
-            pickle.dump(ctype2id,f)
+        # ctype2id = dataset.ctype2id
+        # ntypes = len(ctype2id)
+        # print(ctype2id)
+        # with open(os.path.join(data_path,'ctype2id.pkl'),'wb') as f:
+        #     pickle.dump(ctype2id,f)
         g = dataset.batch_graph
         with open(val_data_file, 'wb') as f:
-            pickle.dump((ctype2id,g), f)
+            pickle.dump(g, f)
 
     print('Validation dataset is ready!')
     # generate and save the train dataset if missing
@@ -216,18 +222,19 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.train_netlist_path, 'implementation')]
         report_folders = [os.path.join(options.train_netlist_path, 'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.train_top, datapaths, report_folders, ctype2id,options.target_block,options.keywords)
+        dataset = Dataset(options.train_top, datapaths, report_folders,
+                          cell_info_map,options.target_block,options.keywords)
 
-        ctype2id = dataset.ctype2id
-        ntypes = len(ctype2id)
-        print(ctype2id)
-        with open(os.path.join(data_path, 'ctype2id.pkl'), 'wb') as f:
-            pickle.dump(ctype2id, f)
+        # ctype2id = dataset.ctype2id
+        # ntypes = len(ctype2id)
+        # print(ctype2id)
+        # with open(os.path.join(data_path, 'ctype2id.pkl'), 'wb') as f:
+        #     pickle.dump(ctype2id, f)
         g = dataset.batch_graph
         with open(train_data_file, 'wb') as f:
-            pickle.dump((ctype2id, g), f)
-    print('Training dataset is ready!')
-    print(ctype2id)
+            pickle.dump(g, f)
+    # print('Training dataset is ready!')
+    # print(ctype2id)
     # initialize the bidirectional model
     print('Intializing models...')
     network = ABGNN
@@ -237,11 +244,11 @@ def preprocess(data_path,device,options):
     # options.in_nlayers = 0 means no fanin model is used (that we only collect information from fanout direction)
     if options.in_nlayers!=0:
         model1 = network(
-            ntypes = len(ctype2id),
+            ntypes = options.in_dim,
             hidden_dim=options.hidden_dim,
             out_dim=options.out_dim,
             n_layers = options.in_nlayers,
-            in_dim = len(ctype2id),
+            in_dim = options.in_dim,
             dropout=options.gcn_dropout,
         )
         out_dim1 = model1.out_dim

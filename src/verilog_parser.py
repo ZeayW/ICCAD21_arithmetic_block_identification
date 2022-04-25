@@ -118,14 +118,15 @@ class PortInfo:
         self.is_input = False
 class DcParser:
     def __init__(
-        self, top_module: str, target_block,keywords: List[str],ctype2id,
+        self, top_module: str, target_block,keywords: List[str],cell_info_map
     ):
         self.top_module = top_module
         self.target_block = target_block
         self.keywords = keywords
-        self.ctype2id = ctype2id
         self.cell_types = set()
         self.ntypes = set()
+        self.cell_info_map = cell_info_map
+
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
 
@@ -200,6 +201,7 @@ class DcParser:
                 if self.target_block == 'mul' and '*' in expression:
                     dp_target_blocks[block_name] = dp_target_blocks.get(block_name, ('mul', {}, {}))
                     # get the operants (inputs)
+                    dp_target_blocks[block_name][2][var_name] = 1
                     operants = expression.split('*')
                     for operant in operants:
                         dp_target_blocks[block_name][1][operant] = 2
@@ -256,7 +258,8 @@ class DcParser:
         return port_info
 
     def parse_port(
-        self, mcomp: str,port: pyverilog.vparser.parser.Portlist,index01:list,dp_inputs:list,dp_outputs:list,flag
+        self, mcomp: str,port: pyverilog.vparser.parser.Portlist,
+            index01:list,dp_inputs:list,dp_outputs:list,output_ports
     ) -> PortInfo:
         r"""
 
@@ -297,14 +300,14 @@ class DcParser:
         if portname in ["CLK","CLOCK"]:  # clock
             port_info.ptype = "CLK"
             return port_info
-        elif self.is_output_port(portname) or flag:
+        elif portname in output_ports:
             port_info.ptype = "fanout"
         else:
             port_info.ptype = "fanin"
 
         is_target = False
         for kw in self.keywords:
-            if kw in mcomp :
+            if kw in mcomp:
                 is_target = True
                 break
         if len(dp_inputs)!=0 or len(dp_outputs)!=0:
@@ -394,6 +397,10 @@ class DcParser:
                 continue
 
             self.cell_types.add(mcell)
+            cell_info = self.cell_info_map.get(mcell,None)
+            assert cell_info is None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
+            output_ports = list(cell_info.outputs.keys())
+            port2argname = {}
             # fanins / fanouts the the cell
             fanins: List[PortInfo] = []
             fanouts: List[PortInfo] = []
@@ -401,19 +408,16 @@ class DcParser:
             dp_inputs,dp_outputs = [],[]
 
             # judge if the current cell a target
-            for dp_cell in dp_target_blocks.keys():
-                if dp_cell in mcomp:
-                    dp_inputs = dp_target_blocks[dp_cell][1]
-                    dp_outputs = dp_target_blocks[dp_cell][2]
+            for dp_block in dp_target_blocks.keys():
+                if dp_target_blocks[dp_block] is not None and dp_block in mcomp:
+                    dp_inputs = dp_target_blocks[dp_block][1]
+                    dp_outputs = dp_target_blocks[dp_block][2]
                     break
 
             # parse the port information
-            num_port = len(ports)
-            flag_last = False
             for idx,p in enumerate(ports):
-                if idx == num_port:
-                    flag_last = True
-                port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs,flag_last)
+                port_info = self.parse_port(mcomp, p,index01,dp_inputs,dp_outputs,output_ports)
+                port2argname[port_info.portname] = port_info.argname
                 if port_info.ptype == "fanin":
                     fanins.append(port_info)
                 elif port_info.ptype == "fanout":
@@ -426,47 +430,32 @@ class DcParser:
             if not fanouts:
                 item.show()
                 print("***** warning, the above gate has no fanout recognized! *****")
+                assert False
                 # do not assert, because some gates indeed have no fanout...
                 # assert False, "no fanout recognized"
-            inputs = {}
 
             for fo in fanouts:
                 # the nodes are the fanouts of cells
                 # do some replacement, replace some of the cell to some fix cell type, e.g., AO221 -> AND + OR
+                fo_portname = fo.portname
+                sub_nodes,sub_inputs = cell_info.outputs[fo_portname]
+                for nd in sub_nodes:
+                    if nd[0] == fo_portname:
+                        node = ((fo.argname,nd[1]))
+                    else:
+                        node = (('{}___{}'.format(fo.argname,nd[0])))
+                        port2argname[nd[0]] = '{}___{}'.format(fo.argname,nd[0])
+                    nodes.append(node)
 
-                ntype = mcell
-                pos = re.search("\d", mcell)
-                if pos:
-                    ntype = ntype[: pos.start()]
-                if ntype=='':
-                    print(mcell)
-                    assert False
-
-                if ntype.startswith('CK'):
-                    ntype = ntype[2:]
-                elif ntype.startswith('BUFF'):
-                    ntype = 'BUFF'
-                self.ntypes.add(ntype)
-
-                if self.ctype2id.get(ntype,None) is None:
-                    id = len(self.ctype2id)
-                    self.ctype2id[ntype] = id
-                inputs[fo.argname] = inputs.get(fo.argname, [])
-                for fi in fanins:
-                    inputs[fo.argname].append(fi.argname)
-                #if buff_replace.get(fo.argname, None) is None:
-                nodes.append((fo.argname, {"type": ntype}))
-            # the edges represents the connection between the fanins and the fanouts
-            for output,input in inputs.items():
-
-                for fi in input:
-                    edges.append(
-                        (
-                            fi,
-                            output,
-                            {"is_reverted": False, "is_sequencial": "DFF" in mtype},
+                for output, input in sub_inputs.items():
+                    for fi in input:
+                        edges.append(
+                            (
+                                port2argname[fi],
+                                port2argname[output],
+                                {"is_reverted": False, "is_sequencial": "DFF" in mtype},
+                            )
                         )
-                    )
 
         # remove the buffers
         new_edges = []
@@ -493,17 +482,6 @@ class DcParser:
         for n in nodes:
             n[1]["is_input"] = n[0] in block_inputs
             n[1]["is_output"] = n[0] in block_outputs
-        #
-        # print('num adder inputs:', len(adder_inputs))
-        # print('num adder outputs:', len(adder_outputs))
-        #
-        # print('num muldiv inputs1:', len(muldiv_inputs1))
-        # print('num muldiv inputs2:', len(muldiv_inputs2))
-        # print('num muldiv outputs:', len(multdiv_outputs))
-        #
-        # print('num sub inputs1:', len(sub_inputs1))
-        # print('num sub inputs2:', len(sub_inputs2))
-        # print('num sub outputs:', len(sub_outputs))
         #print(self.cell_types)
         print(self.ntypes)
         return nodes, edges
