@@ -537,26 +537,26 @@ def train(options):
     out_sampler = Sampler([None] * out_nlayers, include_dst_in_src=False)
 
     # split the validation set and test set
-    # if os.path.exists(os.path.join(options.datapath, 'val_nids.pkl')):
-    #     with open(os.path.join(options.datapath, 'val_nids.pkl'), 'rb') as f:
-    #         val_nids = pickle.load(f)
-    #     with open(os.path.join(options.datapath, 'test_nids.pkl'), 'rb') as f:
-    #         test_nids = pickle.load(f)
-    # else:
-    #     val_nids = th.tensor(range(val_g.number_of_nodes()))
-    #     val_nids = val_nids[val_g.ndata['label_o'].squeeze(-1) != -1]
-    #     val_nids1 = val_nids.numpy().tolist()
-    #     shuffle(val_nids1)
-    #     val_nids = val_nids1[:int(len(val_nids1) / 10)]
-    #     test_nids = val_nids1[int(len(val_nids1) / 10):]
-    #
-    #     with open(os.path.join(options.datapath, 'val_nids.pkl'), 'wb') as f:
-    #         pickle.dump(val_nids, f)
-    #     with open(os.path.join(options.datapath, 'test_nids.pkl'), 'wb') as f:
-    #         pickle.dump(test_nids, f)
+    if os.path.exists(os.path.join(options.datapath, 'val_nids.pkl')):
+        with open(os.path.join(options.datapath, 'val_nids.pkl'), 'rb') as f:
+            val_nids = pickle.load(f)
+        with open(os.path.join(options.datapath, 'test_nids.pkl'), 'rb') as f:
+            test_nids = pickle.load(f)
+    else:
+        val_nids = th.tensor(range(val_g.number_of_nodes()))
+        val_nids = val_nids[val_g.ndata['label_o'].squeeze(-1) != -1]
+        val_nids1 = val_nids.numpy().tolist()
+        shuffle(val_nids1)
+        val_nids = val_nids1[:int(len(val_nids1) / 10)]
+        test_nids = val_nids1[int(len(val_nids1) / 10):]
 
-    val_nids  =  th.tensor(range(val_g.number_of_nodes()))
-    test_nids = th.tensor(range(val_g.number_of_nodes()))
+        with open(os.path.join(options.datapath, 'val_nids.pkl'), 'wb') as f:
+            pickle.dump(val_nids, f)
+        with open(os.path.join(options.datapath, 'test_nids.pkl'), 'wb') as f:
+            pickle.dump(test_nids, f)
+    #
+    # val_nids  =  th.tensor(range(val_g.number_of_nodes()))
+    # test_nids = th.tensor(range(val_g.number_of_nodes()))
     # create dataloader for training/validate dataset
     graph_function = get_reverse_graph
 
