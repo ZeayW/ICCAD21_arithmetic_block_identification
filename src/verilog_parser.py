@@ -4,6 +4,7 @@ import collections
 from typing import List, Dict, Tuple, Optional
 import pyverilog
 from pyverilog.vparser.parser import parse
+from parse_cell_lib import CellInfo
 import re
 
 import networkx as nx
@@ -396,9 +397,36 @@ class DcParser:
             if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout"):
                 continue
 
-            self.cell_types.add(mcell)
-            cell_info = self.cell_info_map.get(mcell,None)
-            assert cell_info is None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
+            cell_name = mcell
+            if cell_name.startswith('ANTE') or cell_name.startswith('BHD') or cell_name.startswith(
+                    'TIE') or cell_name.startswith('DCAP') or cell_name.startswith('GCK'):
+                continue
+
+            if cell_name.startswith('ND'):
+                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
+            else:
+                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
+            if idx is None:
+                print(cell_name)
+                assert False
+
+            if cell_name.startswith('MUX'):
+                idx = re.search('MUX\d+', cell_name)
+                cell_name = cell_name[:idx.end()]
+            elif cell_name.startswith('MXI'):
+                idx = re.search('MXI\d+', cell_name)
+                cell_name = cell_name[:idx.end()]
+            else:
+                if cell_name.startswith('ND'):
+                    cell_name = cell_name[:idx.start() + 2]
+                else:
+                    cell_name = cell_name[:idx.start()]
+            self.cell_types.add(cell_name)
+            cell_info = self.cell_info_map.get(cell_name,None)
+            if cell_info is None:
+                print(mcell)
+                continue
+            assert cell_info is not None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
             output_ports = list(cell_info.outputs.keys())
             port2argname = {}
             # fanins / fanouts the the cell
@@ -439,11 +467,14 @@ class DcParser:
                 # do some replacement, replace some of the cell to some fix cell type, e.g., AO221 -> AND + OR
                 fo_portname = fo.portname
                 sub_nodes,sub_inputs = cell_info.outputs[fo_portname]
+                if len(sub_nodes)==0:
+                    buff_replace[port2argname[fo_portname]] = port2argname[fanins[0].argname]
+                    assert len(fanins)<=1, 'wrong cell: '+mcell
                 for nd in sub_nodes:
                     if nd[0] == fo_portname:
-                        node = ((fo.argname,nd[1]))
+                        node = (fo.argname,nd[1])
                     else:
-                        node = (('{}___{}'.format(fo.argname,nd[0])))
+                        node = ('{}___{}'.format(fo.argname,nd[0]),nd[1])
                         port2argname[nd[0]] = '{}___{}'.format(fo.argname,nd[0])
                     nodes.append(node)
 

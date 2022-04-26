@@ -31,6 +31,8 @@ def parse_single_file(parser,vfile_pair,hier_report):
     # gate types
 
     nodes, edges = parser.parse(vfile_pair,hier_report)
+    print('#node: {}, #edges:{}'.format(len(nodes),len(edges)))
+    print(len(set(nodes)),len(set(edges)))
     ctype2id = {
         "1'b0":0,
         "1'b1":1,

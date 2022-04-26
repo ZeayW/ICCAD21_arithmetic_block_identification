@@ -184,7 +184,7 @@ def parse_cell_lib(file):
 
     cell_list = text.split('cell')
 
-    for cell_text in cell_list:
+    for cell_text in cell_list[1:]:
         cell_name = cell_text.split('\n')[0]
         cell_name = cell_name[cell_name.find('(')+1:cell_name.find(')')]
 
