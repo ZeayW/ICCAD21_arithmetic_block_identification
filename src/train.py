@@ -12,6 +12,7 @@ import os
 from MyDataLoader2 import *
 from time import time
 from random import shuffle
+from parse_cell_lib import CellInfo
 import itertools
 
 
