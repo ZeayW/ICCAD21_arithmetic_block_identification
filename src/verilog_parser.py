@@ -1,6 +1,6 @@
 import os
 import collections
-
+import pickle
 from typing import List, Dict, Tuple, Optional
 import pyverilog
 from pyverilog.vparser.parser import parse
@@ -119,7 +119,7 @@ class PortInfo:
         self.is_input = False
 class DcParser:
     def __init__(
-        self, top_module: str, target_block,keywords: List[str],cell_info_map
+        self, top_module: str, target_block,keywords: List[str],cell_info_map,save_path
     ):
         self.top_module = top_module
         self.target_block = target_block
@@ -127,7 +127,7 @@ class DcParser:
         self.cell_types = set()
         self.ntypes = set()
         self.cell_info_map = cell_info_map
-
+        self.save_path = save_path
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
 
@@ -361,7 +361,14 @@ class DcParser:
             Tuple[str, str, Dict[str, bool]]
         ] = []  # a list of (src, dst, {"is_reverted": is_reverted})
         print('\tgenerating the abstract syntax tree...')
-        ast, directives = parse([fname])
+        if os.path.exists(os.path.join(self.save_path,'ast.pkl')):
+            with open(os.path.join(self.save_path,'ast.pkl'),'rb') as f:
+                ast = pickle.load(f)
+        else:
+            ast, directives = parse([fname])
+            with open(os.path.join(self.save_path,'ast.pkl'),'wb') as f:
+                pickle.dump(ast,f)
+
         index01 = [0,0]
         block_inputs = set()
         block_outputs = set()
@@ -425,7 +432,9 @@ class DcParser:
             cell_info = self.cell_info_map.get(cell_name,None)
             if cell_info is None:
                 print(mcell)
-                continue
+                if mcell.startswith('DF'):
+                    continue
+                #continue
             assert cell_info is not None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
             output_ports = list(cell_info.outputs.keys())
             port2argname = {}
