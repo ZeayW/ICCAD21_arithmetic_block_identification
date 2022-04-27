@@ -20,46 +20,88 @@ def get_ntype(operator):
     else:
         assert False, 'wrong operator: '.format(operator)
 
-def merge_same(inputs:dict,nodes):
+def merge_inv(inputs:dict,nodes,output):
+
     print(nodes,inputs)
     nd2type = {}
     for nd in nodes:
         nd2type[nd[0]] = nd[1]['type']
-    new_inputs = inputs.copy()
-    new_inputs2 = {}
+    fathers = {}
+    new_inputs = {}
+    output_nd = output
+    remove_nodes = {}
+    replace_nodes = []
+    for nd,chilren in inputs.items():
+        for child in chilren:
+            fathers[child] = fathers.get(child,[])
+            fathers[child].append(nd)
+        if chilren is None:
+            continue
+        if nd2type[nd] == 'INV' and nd2type.get(chilren[0],None) is not None:
+            remove_nodes[nd] = chilren[0]
+            nd2type[chilren[0]] = 'N'+nd2type[chilren[0]]
+            replace_nodes.append(chilren[0])
+            #inputs[chilren[0]] = None
+            if nd == output:
+                output_nd = chilren[0]
+    for nd,replace_nd in remove_nodes.items():
+        nd2type[nd] = None
+        inputs[nd] = None
+        if nd!=output:
+            for father in fathers[nd]:
+                inputs[father].remove(nd)
+                inputs[father].append(replace_nd)
+
+    nodes = [(item[0], {'type': item[1]}) for item in nd2type.items() if item[1] is not None]
+
+    remove_nd = None
+    new_nd = None
+    if output_nd!=output:
+        inputs[output] = inputs[output_nd]
+        inputs[output_nd] = None
+        for nd in nodes:
+            if nd[0] == output_nd:
+                remove_nd = nd
+                new_nd  = (output,nd[1])
+        nodes.remove(remove_nd)
+        nodes.append(new_nd)
+    for key, value in inputs.items():
+        if value is not None:
+            new_inputs[key] = value
+
+    return nodes,new_inputs
+def merge_same(inputs:dict,nodes):
+
+    nd2type = {}
+    for nd in nodes:
+        nd2type[nd[0]] = nd[1]['type']
+    #print(nodes, inputs)
+    new_inputs = {}
+
     for nd, children in inputs.items():
+        remove_nodes = []
         if children is None:
             continue
-        flag = True
-        is_trivial = True
         father_type = nd2type[nd]
         sub_children = []
         for child in children:
-            if nd2type.get(child, None) is None or nd2type[child]=='INV':
-                sub_children.append(child)
-            elif nd2type[child]!=father_type:
-                flag =False
-                is_trivial = False
-                break
-            else:
-                is_trivial = False
+            if nd2type.get(child,None) is not None and nd2type[child]==father_type:
                 sub_children.extend(inputs[child])
-
-        if flag and not is_trivial:
+                remove_nodes.append(child)
+        if len(sub_children)!=0:
             sub_children = list(set(sub_children))
-            new_inputs[nd] = sub_children
-            #print('children',children,'sub',sub_children)
-            for child in children:
-                if not child in sub_children:
-                    new_inputs[child] = None
-                    nd2type[child] = None
-
+            inputs[nd].extend(sub_children)
+            for rm_nd in remove_nodes:
+                inputs[nd].remove(rm_nd)
+                nd2type[rm_nd] = None
+                inputs[rm_nd] = None
 
     nodes = [(item[0],{'type':item[1]}) for item in nd2type.items() if item[1] is not None]
-    for key,value in new_inputs.items():
+
+    for key,value in inputs.items():
         if value is not None:
-            new_inputs2[key] = value
-    return nodes,new_inputs2
+            new_inputs[key] = value
+    return nodes,new_inputs
 
 def parse_expression_withoutbracket(expression:str,output):
     expression = expression.replace(' ','')
@@ -115,7 +157,7 @@ def parse_expression_withoutbracket(expression:str,output):
         #     nodes['AND_1'] = ()
 
     nodes, inputs = merge_same(inputs,nodes)
-
+    nodes, inputs = merge_inv(inputs, nodes, output)
     return nodes,inputs
 
 
@@ -173,6 +215,7 @@ def parse_expression_withbracket(expression:str,output):
         inputs[output] = inputs[output_nd[0]]
         inputs[output_nd[0]] = None
     nodes, inputs = merge_same(inputs, nodes)
+    nodes,inputs = merge_inv(inputs,nodes,output)
     return nodes,inputs
 
 
@@ -248,19 +291,19 @@ def parse_cell_lib(file):
     return cell_info_map
 
 def main():
-    cell_info_map = parse_cell_lib('comb_cell.txt')
-
-    os.makedirs('../data',exist_ok=True)
-    with open('../data/cell_lib.pkl','wb') as f:
-        pickle.dump(cell_info_map,f)
-    # exit()
-
-    for key,value in cell_info_map.items():
-        print(key)
-        for output,output_v in value.outputs.items():
-            print('\t',output)
-            print('\t\t',output_v[0])
-            print('\t\t', output_v[1])
+    # cell_info_map = parse_cell_lib('comb_cell.txt')
+    #
+    # os.makedirs('../data',exist_ok=True)
+    # with open('../data/cell_lib.pkl','wb') as f:
+    #     pickle.dump(cell_info_map,f)
+    # # exit()
+    #
+    # for key,value in cell_info_map.items():
+    #     print(key)
+    #     for output,output_v in value.outputs.items():
+    #         print('\t',output)
+    #         print('\t\t',output_v[0])
+    #         print('\t\t', output_v[1])
 
 
     expressions = [
@@ -271,7 +314,9 @@ def main():
         '(((A2+A3)+(!A1)))',
         '(!I)',
         '(I)',
-        '((A1^A2)^A3)'
+        '((A1^A2)^A3)',
+        '(!((A1+A2)+(B1 A1)))',
+        '(!(A1 B1)+!(A1+!B))',
     ]
 
     for express in expressions:
