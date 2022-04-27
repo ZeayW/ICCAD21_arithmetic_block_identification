@@ -108,10 +108,10 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
 
 class Dataset(DGLDataset):
-    def __init__(self, top_module,data_paths,report_folders,cell_info_map,target_block,keywords):
+    def __init__(self, top_module,data_paths,report_folders,target_block,keywords):
         self.data_paths = data_paths
         self.report_folders = report_folders
-        self.parser = DcParser(top_module,target_block,keywords,cell_info_map,report_folders[0])
+        self.parser = DcParser(top_module,target_block,keywords,report_folders[0])
         super(Dataset, self).__init__(name="dac")
 
     def process(self):

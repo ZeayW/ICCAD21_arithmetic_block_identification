@@ -11,6 +11,16 @@ import networkx as nx
 
 import cProfile
 
+assert os.path.exists('../data/comb_cell_lib.pkl'), 'comb cell lib pickle does not exists in {}, Run parse_cell_lib.py first!' \
+    .format('../data/comb_cell_lib.pkl')
+with open('../data/comb_cell_lib.pkl', 'rb') as f:
+    comb_cell_info_map = pickle.load(f)
+
+assert os.path.exists('../data/seq_cell_lib.pkl'), 'seq cell lib pickle does not exists in {}, Run parse_cell_lib.py first!' \
+    .format('../data/seq_cell_lib.pkl')
+with open('../data/seq_cell_lib.pkl', 'rb') as f:
+    seq_cell_info_map = pickle.load(f)
+
 def parse_arg(arg,port_info,ios,wires):
     r"""
 
@@ -119,14 +129,13 @@ class PortInfo:
         self.is_input = False
 class DcParser:
     def __init__(
-        self, top_module: str, target_block,keywords: List[str],cell_info_map,save_path
+        self, top_module: str, target_block,keywords: List[str],save_path
     ):
         self.top_module = top_module
         self.target_block = target_block
         self.keywords = keywords
         self.cell_types = set()
         self.ntypes = set()
-        self.cell_info_map = cell_info_map
         self.save_path = save_path
     def is_input_port(self, port: str) -> bool:
         return not self.is_output_port(port)
@@ -429,11 +438,10 @@ class DcParser:
                 else:
                     cell_name = cell_name[:idx.start()]
             self.cell_types.add(cell_name)
-            cell_info = self.cell_info_map.get(cell_name,None)
-            if cell_info is None:
-                print(mcell)
-                if mcell.startswith('DF'):
-                    continue
+
+            cell_info = comb_cell_info_map.get(cell_name,None)
+            if cell_info is None and seq_cell_info_map.get(cell_name,None) is not None:
+                continue
                 #continue
             assert cell_info is not None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
             output_ports = list(cell_info.outputs.keys())
@@ -477,7 +485,7 @@ class DcParser:
                 fo_portname = fo.portname
                 sub_nodes,sub_inputs = cell_info.outputs[fo_portname]
                 if len(sub_nodes)==0:
-                    buff_replace[port2argname[fo_portname]] = port2argname[fanins[0].argname]
+                    buff_replace[port2argname[fo_portname]] = port2argname[fanins[0].portname]
                     assert len(fanins)<=1, 'wrong cell: '+mcell
                 for nd in sub_nodes:
                     if nd[0] == fo_portname:

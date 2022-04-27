@@ -189,10 +189,10 @@ def preprocess(data_path,device,options):
     # else:
     #     ctype2id = {"1'b0":0,"1'b1":1,'PI':2}
     #
-    assert os.path.exists('../data/cell_lib.pkl'), 'cell lib pickle does not exists in {}, Run parse_cell_lib.py first!'\
-                                                                .format('../data/cell_lib.pkl')
-    with open('../data/cell_lib.pkl','rb') as f:
-        cell_info_map = pickle.load(f)
+    # assert os.path.exists('../data/cell_lib.pkl'), 'cell lib pickle does not exists in {}, Run parse_cell_lib.py first!'\
+    #                                                             .format('../data/cell_lib.pkl')
+    # with open('../data/cell_lib.pkl','rb') as f:
+    #     cell_info_map = pickle.load(f)
 
     if type(options.keywords) == str:
         keywords = [options.keywords]
@@ -204,7 +204,7 @@ def preprocess(data_path,device,options):
         datapaths = [os.path.join(options.val_netlist_path,'implementation')]
         report_folders = [os.path.join(options.val_netlist_path,'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
-        dataset = Dataset(options.val_top,datapaths,report_folders,cell_info_map,
+        dataset = Dataset(options.val_top,datapaths,report_folders,
                           options.target_block,keywords)
 
         # ctype2id = dataset.ctype2id
