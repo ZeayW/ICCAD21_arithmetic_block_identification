@@ -401,7 +401,7 @@ class DcParser:
             mtype = mcell[0 : mcell.rfind("X")]  # e.g. AND2
             mfunc = mtype  # e.g. AND
             mcomp = mname[: mname.rfind("_")]
-            if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout"):
+            if mcell.startswith("SNPS_CLOCK") or mcell.startswith("PlusArgTimeout") or mcell.startswith('DF'):
                 continue
 
             cell_name = mcell
