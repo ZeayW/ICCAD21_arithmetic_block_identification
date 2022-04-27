@@ -40,10 +40,11 @@ def parse_single_file(parser,vfile_pair,hier_report):
         "AND":3,
         "OR":4,
         "XOR":5,
-        "INV":6,
-        "BUF":7,
+        "MUX":6,
+        "INV":7,
         "DFF":8,
     }
+
     print('--- Transforming to dgl graph...')
     # build the dgl graph
     G = nx.DiGraph()
@@ -110,7 +111,7 @@ class Dataset(DGLDataset):
     def __init__(self, top_module,data_paths,report_folders,cell_info_map,target_block,keywords):
         self.data_paths = data_paths
         self.report_folders = report_folders
-        self.parser = DcParser(top_module,target_block,keywords,cell_info_map)
+        self.parser = DcParser(top_module,target_block,keywords,cell_info_map,report_folders[0])
         super(Dataset, self).__init__(name="dac")
 
     def process(self):
