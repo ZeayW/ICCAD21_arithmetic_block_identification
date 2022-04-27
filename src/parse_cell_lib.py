@@ -291,19 +291,19 @@ def parse_cell_lib(file):
     return cell_info_map
 
 def main():
-    # cell_info_map = parse_cell_lib('comb_cell.txt')
-    #
-    # os.makedirs('../data',exist_ok=True)
-    # with open('../data/cell_lib.pkl','wb') as f:
-    #     pickle.dump(cell_info_map,f)
-    # # exit()
-    #
-    # for key,value in cell_info_map.items():
-    #     print(key)
-    #     for output,output_v in value.outputs.items():
-    #         print('\t',output)
-    #         print('\t\t',output_v[0])
-    #         print('\t\t', output_v[1])
+    cell_info_map = parse_cell_lib('comb_cell.txt')
+
+    os.makedirs('../data',exist_ok=True)
+    with open('../data/cell_lib.pkl','wb') as f:
+        pickle.dump(cell_info_map,f)
+    # exit()
+
+    for key,value in cell_info_map.items():
+        print(key)
+        for output,output_v in value.outputs.items():
+            print('\t',output)
+            print('\t\t',output_v[0])
+            print('\t\t', output_v[1])
 
 
     expressions = [
