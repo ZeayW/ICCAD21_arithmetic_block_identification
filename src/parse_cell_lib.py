@@ -22,7 +22,7 @@ def get_ntype(operator):
 
 def merge_inv(inputs:dict,nodes,output):
 
-    print(nodes,inputs)
+    #print(nodes,inputs)
     nd2type = {}
     for nd in nodes:
         nd2type[nd[0]] = nd[1]['type']
@@ -294,7 +294,7 @@ def main():
     cell_info_map = parse_cell_lib('comb_cell.txt')
 
     os.makedirs('../data',exist_ok=True)
-    with open('../data/cell_lib.pkl','wb') as f:
+    with open('../data/comb_cell_lib.pkl','wb') as f:
         pickle.dump(cell_info_map,f)
     # exit()
 
@@ -305,7 +305,20 @@ def main():
             print('\t\t',output_v[0])
             print('\t\t', output_v[1])
 
+    cell_info_map = parse_cell_lib('sequential_cell.txt')
+    #os.makedirs('../data', exist_ok=True)
+    with open('../data/seq_cell_lib.pkl', 'wb') as f:
+        pickle.dump(cell_info_map, f)
+    # exit()
 
+    for key, value in cell_info_map.items():
+        print(key)
+        for output, output_v in value.outputs.items():
+            print('\t', output)
+            print('\t\t', output_v[0])
+            print('\t\t', output_v[1])
+
+    exit()
     expressions = [
         '(!((A1 A2)+(B1 B2)))',
         '(A1 A2)',
