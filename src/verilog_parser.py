@@ -420,6 +420,8 @@ class DcParser:
 
             if cell_name.startswith('ND'):
                 idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
+            elif cell_name.startswith('IND'):
+                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[3:])
             else:
                 idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
             if idx is None:
@@ -435,6 +437,8 @@ class DcParser:
             else:
                 if cell_name.startswith('ND'):
                     cell_name = cell_name[:idx.start() + 2]
+                elif cell_name.startswith('IND'):
+                    cell_name = cell_name[:idx.start() + 3]
                 else:
                     cell_name = cell_name[:idx.start()]
             self.cell_types.add(cell_name)
