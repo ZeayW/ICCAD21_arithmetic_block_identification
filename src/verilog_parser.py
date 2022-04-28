@@ -424,7 +424,7 @@ class DcParser:
                 idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[3:])
             else:
                 idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
-            if idx is None:
+            if idx is None and 'SRAM' not in cell_name:
                 print(cell_name)
                 assert False
 

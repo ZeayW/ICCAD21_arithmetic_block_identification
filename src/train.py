@@ -1,7 +1,7 @@
 r"""
 this script is used to train/fine-tune and validate/test the models
 """
-from src.parse_cell_lib import CellInfo
+from parse_cell_lib import CellInfo
 from dataset import *
 from options import get_options
 from model import *
