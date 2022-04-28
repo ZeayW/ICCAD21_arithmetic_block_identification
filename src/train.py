@@ -1,7 +1,7 @@
 r"""
 this script is used to train/fine-tune and validate/test the models
 """
-
+from src.parse_cell_lib import CellInfo
 from dataset import *
 from options import get_options
 from model import *
@@ -12,9 +12,7 @@ import os
 from MyDataLoader2 import *
 from time import time
 from random import shuffle
-from parse_cell_lib import CellInfo
 import itertools
-
 
 def DAG2UDG(g):
     r"""
