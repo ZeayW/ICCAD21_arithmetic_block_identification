@@ -418,14 +418,18 @@ class DcParser:
                     'TIE') or cell_name.startswith('DCAP') or cell_name.startswith('GCK'):
                 continue
 
-            if cell_name.startswith('ND'):
-                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
-            elif cell_name.startswith('IND'):
-                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[3:])
-            elif cell_name.startswith('AOI21ND'):
-                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[7:])
+            split_idx = 0
+            if re.search('ND\d+',cell_name) is not None:
+                split_idx = re.search('ND\d+',cell_name).end()
+                idx = re.search('((EEQM|OPT|SK)\w*|)((D|X)\d+\w*COT)', cell_name[split_idx:])
+            # if cell_name.startswith('ND'):
+            #     idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
+            # elif cell_name.startswith('IND'):
+            #     idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[3:])
+            # elif cell_name.startswith('AOI21ND'):
+            #     idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[7:])
             else:
-                idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
+                idx = re.search('((EEQM|OPT|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
             if idx is None :
                 print(cell_name)
                 if 'SRAM' in cell_name:
@@ -439,14 +443,15 @@ class DcParser:
                 idx = re.search('MXI\d+', cell_name)
                 cell_name = cell_name[:idx.end()]
             else:
-                if cell_name.startswith('ND'):
-                    cell_name = cell_name[:idx.start() + 2]
-                elif cell_name.startswith('IND'):
-                    cell_name = cell_name[:idx.start() + 3]
-                elif cell_name.startswith('AOI21ND'):
-                    cell_name = cell_name[:idx.start() + 7]
-                else:
-                    cell_name = cell_name[:idx.start()]
+                cell_name = cell_name[:idx.start()+split_idx]
+                # if cell_name.startswith('ND'):
+                #     cell_name = cell_name[:idx.start() + 2]
+                # elif cell_name.startswith('IND'):
+                #     cell_name = cell_name[:idx.start() + 3]
+                # elif cell_name.startswith('AOI21ND'):
+                #     cell_name = cell_name[:idx.start() + 7]
+                # else:
+                #     cell_name = cell_name[:idx.start()]
             self.cell_types.add(cell_name)
 
             cell_info = comb_cell_info_map.get(cell_name,None)
