@@ -235,26 +235,30 @@ def parse_cell_lib(file):
             continue
 
         if cell_name.startswith('ND'):
-            idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)',cell_name[2:])
+            idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
         elif cell_name.startswith('IND'):
             idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[3:])
+        elif cell_name.startswith('AOI21ND'):
+            idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[7:])
         else:
-            idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)',cell_name)
+            idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
         if idx is None:
             print(cell_name)
             assert False
 
         if cell_name.startswith('MUX'):
-            idx = re.search('MUX\d+',cell_name)
+            idx = re.search('MUX\d+', cell_name)
             cell_name = cell_name[:idx.end()]
         elif cell_name.startswith('MXI'):
-            idx = re.search('MXI\d+',cell_name)
+            idx = re.search('MXI\d+', cell_name)
             cell_name = cell_name[:idx.end()]
         else:
             if cell_name.startswith('ND'):
-                cell_name = cell_name[:idx.start()+2]
+                cell_name = cell_name[:idx.start() + 2]
             elif cell_name.startswith('IND'):
-                cell_name = cell_name[:idx.start()+3]
+                cell_name = cell_name[:idx.start() + 3]
+            elif cell_name.startswith('AOI21ND'):
+                cell_name = cell_name[:idx.start() + 7]
             else:
                 cell_name = cell_name[:idx.start()]
 
