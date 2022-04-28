@@ -280,18 +280,21 @@ def parse_cell_lib(file):
                 fanins.append(pinname)
 
         if cell_name.startswith('MUX'):
-            output_pin = fanouts[0]
-            nodes = [((output_pin,{'type':'MUX'}))]
-            inputs = {}
-            cell_info_map[cell_name].outputs[output_pin] = (nodes, inputs)
+            output_pins = ['Z','ZN']
+            for output_pin in output_pins:
+                nodes = [((output_pin,{'type':'MUX'}))]
+                inputs = {}
+                inputs[output_pin] = fanins
+                cell_info_map[cell_name].outputs[output_pin] = (nodes, inputs)
         elif cell_name.startswith('MXI'):
-            output_pin = fanouts[0]
-            nodes, inputs = [],{}
-            nodes.append( (1,{'type':'INV'}) )
-            nodes.append( (output_pin,{'type':'MUX'}) )
-            inputs[1] = [output_pin]
-            inputs[output_pin] = fanins
-            cell_info_map[cell_name].outputs[output_pin] = (nodes, inputs)
+            output_pins = ['Z', 'ZN']
+            for output_pin in output_pins:
+                nodes, inputs = [],{}
+                nodes.append( (1,{'type':'INV'}) )
+                nodes.append( (output_pin,{'type':'MUX'}) )
+                inputs[1] = [output_pin]
+                inputs[output_pin] = fanins
+                cell_info_map[cell_name].outputs[output_pin] = (nodes, inputs)
     return cell_info_map
 
 def main():
