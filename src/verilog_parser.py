@@ -419,9 +419,9 @@ class DcParser:
                 continue
 
             split_idx = 0
-            if re.search('ND\d+',cell_name) is not None:
-                split_idx = re.search('ND\d+',cell_name).end()
-                idx = re.search('((EEQM|OPT|SK)\w*|)((D|X)\d+\w*COT)', cell_name[split_idx:])
+            if re.search('(D|X)\d+\w*(D|X)\d+\w*COT', cell_name) is not None:
+                split_idx = re.search('(D|X)\d+\w*(D|X)\d+\w*COT', cell_name).start() + 1
+                idx = re.search('((D|X)\d+\w*COT)', cell_name[split_idx:])
             # if cell_name.startswith('ND'):
             #     idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[2:])
             # elif cell_name.startswith('IND'):
@@ -429,12 +429,11 @@ class DcParser:
             # elif cell_name.startswith('AOI21ND'):
             #     idx = re.search('((EEQM|OPT|CCB|SK)\w*|)((D|X)\d+\w*COT)', cell_name[7:])
             else:
-                idx = re.search('((EEQM|OPT|SK)\w*|)((D|X)\d+\w*COT)', cell_name)
-            if idx is None :
+                idx = re.search('((D|X)\d+\w*COT)', cell_name)
+            if idx is None:
                 print(cell_name)
                 if 'SRAM' in cell_name:
                     continue
-                assert False
 
             if cell_name.startswith('MUX'):
                 idx = re.search('MUX\d+', cell_name)
