@@ -435,14 +435,14 @@ class DcParser:
                 if 'SRAM' in cell_name:
                     continue
 
-            if cell_name.startswith('MUX'):
-                idx = re.search('MUX\d+', cell_name)
-                cell_name = cell_name[:idx.end()]
-            elif cell_name.startswith('MXI'):
-                idx = re.search('MXI\d+', cell_name)
-                cell_name = cell_name[:idx.end()]
-            else:
-                cell_name = cell_name[:idx.start()+split_idx]
+            # if cell_name.startswith('MUX'):
+            #     idx = re.search('MUX\d+', cell_name)
+            #     cell_name = cell_name[:idx.end()]
+            # elif cell_name.startswith('MXI'):
+            #     idx = re.search('MXI\d+', cell_name)
+            #     cell_name = cell_name[:idx.end()]
+            # else:
+            cell_name = cell_name[:idx.start()+split_idx]
                 # if cell_name.startswith('ND'):
                 #     cell_name = cell_name[:idx.start() + 2]
                 # elif cell_name.startswith('IND'):
