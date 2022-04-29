@@ -646,8 +646,7 @@ def train(options):
             endtime = time()
             runtime += endtime-start_time
 
-        print('time1: ',runtime)
-        start = time()
+        
         Train_loss = total_loss / total_num
 
 
@@ -661,8 +660,7 @@ def train(options):
         Train_F1_score = 0
         if Train_precision != 0 or Train_recall != 0:
             Train_F1_score = 2 * Train_recall * Train_precision / (Train_recall + Train_precision)
-        end = time()
-        runtime += end-start
+
         print("epoch[{:d}]".format(epoch))
         print("training runtime: ",runtime)
         print("  train:")
