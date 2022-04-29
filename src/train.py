@@ -260,11 +260,11 @@ def preprocess(data_path,device,options):
     # options.out_nlayers = 0 means no fanout model is used (that we only collect information from fanin direction)
     if options.out_nlayers!=0:
         model2 = network(
-            ntypes=len(ctype2id),
+            ntypes=options.in_dim,
             hidden_dim=options.hidden_dim,
             out_dim=options.out_dim,
             n_layers=options.out_nlayers,
-            in_dim=len(ctype2id),
+            in_dim=options.in_dim,
             dropout=options.gcn_dropout,
         )
         out_dim2 = model2.out_dim
@@ -428,43 +428,14 @@ def validate(loader,label_name,device,model,Loss,beta,options):
     return [loss, acc,recall,precision,F1_score]
 
 
-def load_data(data_path,latest_ctype2id_file):
-    with open(latest_ctype2id_file, 'rb') as f:
-        latest_ctype2id = pickle.load(f)
+def load_data(data_path):
+   
+    assert os.path.exists(data_path), \
+        "Can not find the dataset file '{}'".format(data_path)
     with open(data_path,'rb') as f:
-        graph_ctype2id,graph = pickle.load(f)
-        graph_id2ctype = {}
-        for key,value in graph_ctype2id.items():
-            graph_id2ctype[value] = key
-        ntypes = len(graph_ctype2id)
-        graph_ntypes = graph.ndata['ntype'].shape[1]
-
-    latest_ntypes = len(latest_ctype2id)
-
-    if graph_ntypes < latest_ntypes:
-        for n in graph.nodes():
-            type_id = th.argmax(graph.ndata['ntype'][n])
-            type = graph_id2ctype[type_id.item()]
-            if latest_ctype2id.get(type,None) is None:
-                latest_ctype2id[type] = len(latest_ctype2id)
-                print('unknown cell type, extend the ctype2id!')
-        updated_ntype = th.zeros((graph.number_of_nodes(), len(latest_ctype2id)), dtype=th.float)
-        for n in graph.nodes():
-            type_id = th.argmax(graph.ndata['ntype'][n])
-            type = graph_id2ctype[type_id.item()]
-            type_id = latest_ctype2id[type]
-            updated_ntype[n][type_id] = 1
-        graph.ndata['ntype'] = updated_ntype
-        with open(data_path, 'wb') as f:
-            pickle.dump((latest_ctype2id,graph),f)
-    elif graph_ntypes>ntypes:
-        assert False, 'too many cell types!'
-    print(latest_ctype2id)
-    with open(latest_ctype2id_file, 'wb') as f:
-        pickle.dump(latest_ctype2id,f)
-
-    in_dim = len(latest_ctype2id)
-    return graph,in_dim
+        graph = pickle.load(f)
+        
+    return graph
 def train(options):
 
     th.multiprocessing.set_sharing_strategy('file_system')
@@ -473,7 +444,7 @@ def train(options):
     # you can define your dataset file here
     data_path = options.datapath
     print(data_path)
-    ctype2id_file = os.path.join(data_path,'ctype2id.pkl')
+
     train_data_file = os.path.join(data_path,'train.pkl')
     val_data_file = os.path.join(data_path,'test.pkl')
 
@@ -499,17 +470,15 @@ def train(options):
         print('Error: wrong label!')
         exit()
     print("----------------Loading data----------------")
-    if not os.path.exists(ctype2id_file) :
-        assert False, 'No ctype2id file! Please run the data generating procedure or copy a existed ctype2id file to the data path!'
-
+    
     print('train ctypes:')
-    train_g,in_dim = load_data(train_data_file,ctype2id_file)
+    train_g = load_data(train_data_file)
     print('test ctypes:')
-    val_g,in_dim = load_data(val_data_file,ctype2id_file)
+    val_g = load_data(val_data_file)
     print('Data successfully loaded!')
 
     # apply the over-samplying strategy to deal with data imbalance
-    train_nodes, pos_count, neg_count = oversample(train_g, options, in_dim)
+    train_nodes, pos_count, neg_count = oversample(train_g, options, options.in_dim)
 
     if options.label == 'in':
         labels = val_g.ndata['label_i']
@@ -525,8 +494,8 @@ def train(options):
     neg_nodes = nodes[mask_neg].numpy().tolist()
     shuffle(pos_nodes)
     shuffle(neg_nodes)
-    pos_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
-    neg_count = th.zeros(size=(1, in_dim)).squeeze(0).numpy().tolist()
+    pos_count = th.zeros(size=(1, options.in_dim)).squeeze(0).numpy().tolist()
+    neg_count = th.zeros(size=(1, options.in_dim)).squeeze(0).numpy().tolist()
     pos_types = val_g.ndata['ntype'][pos_nodes]
     neg_types = val_g.ndata['ntype'][neg_nodes]
     pos_types = th.argmax(pos_types, dim=1)
