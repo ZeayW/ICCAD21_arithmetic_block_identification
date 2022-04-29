@@ -235,7 +235,7 @@ def parse_cell_lib(file):
             continue
 
         split_idx = 0
-        if re.search('(D|X)\d+\w*(D|X)\d+\w*COT', cell_name) is not None :
+        if re.search('(D|X)\d+\w*(D|X)\d+\w*COT', cell_name) is not None:
             split_idx = re.search('(D|X)\d+\w*(D|X)\d+\w*COT', cell_name).start()+1
             idx = re.search('((D|X)\d+\w*COT)', cell_name[split_idx:])
         # if cell_name.startswith('ND'):
@@ -252,14 +252,14 @@ def parse_cell_lib(file):
                 continue
             assert False
 
-        if cell_name.startswith('MUX'):
-            idx = re.search('MUX\d+', cell_name)
-            cell_name = cell_name[:idx.end()]
-        elif cell_name.startswith('MXI'):
-            idx = re.search('MXI\d+', cell_name)
-            cell_name = cell_name[:idx.end()]
-        else:
-            cell_name = cell_name[:idx.start() + split_idx]
+        # if cell_name.startswith('MUX'):
+        #     idx = re.search('MUX\d+', cell_name)
+        #     cell_name = cell_name[:idx.end()]
+        # elif cell_name.startswith('MXI'):
+        #     idx = re.search('MXI\d+', cell_name)
+        #     cell_name = cell_name[:idx.end()]
+        # else:
+        cell_name = cell_name[:idx.start() + split_idx]
         cell_info_map[cell_name] = CellInfo()
         pin_text = cell_text[cell_text.find('pin'):]
         pins = pin_text.split('pin')[1:]
