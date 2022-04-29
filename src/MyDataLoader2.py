@@ -167,6 +167,7 @@ class MyNodeCollator(NodeCollator):
         else:
             items = utils.prepare_tensor(self.g, items, 'items')
 
+        start = time()
         if self.predict is False:
             if len(set(items.numpy().tolist())) != get_options().batch_size:
                #print('add...')
@@ -179,9 +180,17 @@ class MyNodeCollator(NodeCollator):
                   #print(nid)
                items = torch.tensor(list(items))
 
+        end = time()
+        print('time1:',end-start)
+        start = time()
         blocks = self.block_sampler.sample_blocks(self.g, items)
+        end = time()
+        print('time2:',end-start)
+        start = time()
         reverse_blocks =self.reverse_block_sampler.sample_blocks(self.rg, items)
-
+        end = time()
+        print('time3',end-start)
+        
         central_nodes = blocks[-1].dstdata[NID]
         input_nodes = blocks[0].srcdata[NID]
         reverse_input_nodes = reverse_blocks[0].srcdata[NID]
@@ -201,7 +210,7 @@ class MyNodeDataLoaderIter:
         _restore_blocks_storage(blocks, self.node_dataloader.collator.g)
         _restore_blocks_storage(reverse_blocks, self.node_dataloader.collator.rg)
         end = time()
-        print(end-start)
+        print('overall sample time',end-start)
         return blocks,reverse_blocks
 
 
