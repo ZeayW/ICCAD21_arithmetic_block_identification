@@ -627,8 +627,7 @@ def train(options):
             # calculate the loss
             train_loss = Loss(label_hat, output_labels)
             total_loss += train_loss.item() * len(output_labels)
-            endtime = time()
-            runtime += endtime - start_time
+            
             # count the correctly predicted samples
             correct += (
                     predict_labels == output_labels
@@ -640,7 +639,6 @@ def train(options):
             tn += ((predict_labels == 0) & (output_labels == 0)).sum().item()
             fp += ((predict_labels != 0) & (output_labels == 0)).sum().item()
 
-            start_time = time()
             # back propagation
             optim.zero_grad()
             train_loss.backward()
@@ -648,6 +646,8 @@ def train(options):
             endtime = time()
             runtime += endtime-start_time
 
+        print('time1: ',runtime)
+        start = time()
         Train_loss = total_loss / total_num
 
 
@@ -661,7 +661,8 @@ def train(options):
         Train_F1_score = 0
         if Train_precision != 0 or Train_recall != 0:
             Train_F1_score = 2 * Train_recall * Train_precision / (Train_recall + Train_precision)
-
+        end = time()
+        runtime += end-start
         print("epoch[{:d}]".format(epoch))
         print("training runtime: ",runtime)
         print("  train:")

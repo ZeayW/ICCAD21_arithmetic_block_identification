@@ -1,4 +1,5 @@
 
+from time import time
 import matplotlib.pyplot as plt
 
 from dgl.subgraph import *
@@ -194,10 +195,13 @@ class MyNodeDataLoaderIter:
         self.iter_ = iter(node_dataloader.dataloader)
 
     def __next__(self):
+        start = time()
         central_nodes, input_nodes,blocks, reverse_input_nodes,reverse_blocks = next(self.iter_)
 
         _restore_blocks_storage(blocks, self.node_dataloader.collator.g)
         _restore_blocks_storage(reverse_blocks, self.node_dataloader.collator.rg)
+        end = time()
+        print(end-start)
         return blocks,reverse_blocks
 
 
