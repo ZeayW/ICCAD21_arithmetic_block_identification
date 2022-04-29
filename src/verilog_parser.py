@@ -532,7 +532,8 @@ class DcParser:
             "\tlabelling is done! #inputs:{}, #outputs:{}".format(len(block_inputs), len(block_outputs)),
             flush=True,
         )
-
+        print("#nodes:{}, #edges:{}".format(len(nodes),len(edges)))
+        print("Connecting PIs...")
         # add the edges that connect PIs
         gate_names = set([n[0] for n in nodes])
         pis = []
@@ -540,7 +541,7 @@ class DcParser:
             if src not in gate_names and src not in pis:
                 nodes.append((src, {"type": "PI"}))
                 pis.append(src)
-
+        print("Adding node labels...")
         # label the nodes
         for n in nodes:
             n[1]["is_input"] = n[0] in block_inputs
