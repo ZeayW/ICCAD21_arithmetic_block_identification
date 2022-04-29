@@ -459,7 +459,7 @@ class DcParser:
                 #continue
             assert cell_info is not None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
             output_ports = list(cell_info.outputs.keys())
-            print(mcell,cell_name,output_ports)
+            #print(mcell,cell_name,output_ports)
             port2argname = {}
             # fanins / fanouts the the cell
             fanins: List[PortInfo] = []

@@ -42,7 +42,9 @@ def parse_single_file(parser,vfile_pair,hier_report):
         "XOR":5,
         "MUX":6,
         "INV":7,
-        "DFF":8,
+        "NAND":8,
+        "NOR":9,
+        "NXOR":10
     }
 
     print('--- Transforming to dgl graph...')
