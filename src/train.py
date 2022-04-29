@@ -222,7 +222,7 @@ def preprocess(data_path,device,options):
         report_folders = [os.path.join(options.train_netlist_path, 'report')]
         th.multiprocessing.set_sharing_strategy('file_system')
         dataset = Dataset(options.train_top, datapaths, report_folders,
-                          cell_info_map,options.target_block,options.keywords)
+                          options.target_block,options.keywords)
 
         # ctype2id = dataset.ctype2id
         # ntypes = len(ctype2id)

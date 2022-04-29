@@ -1,6 +1,8 @@
 import os
 import collections
 import pickle
+from tkinter import N
+from tkinter.messagebox import NO
 from typing import List, Dict, Tuple, Optional
 import pyverilog
 from pyverilog.vparser.parser import parse
@@ -536,11 +538,14 @@ class DcParser:
         print("Connecting PIs...")
         # add the edges that connect PIs
         gate_names = set([n[0] for n in nodes])
-        pis = []
+        node_dict = {}
+        for nm in gate_names:
+            node_dict[nm] = True
+        pis = {}
         for (src, _, _) in edges:
-            if src not in gate_names and src not in pis:
+            if node_dict.get(src,None) is None and pis.get(src,None) is None:
                 nodes.append((src, {"type": "PI"}))
-                pis.append(src)
+                pis[src] = True
         print("Adding node labels...")
         # label the nodes
         for n in nodes:
