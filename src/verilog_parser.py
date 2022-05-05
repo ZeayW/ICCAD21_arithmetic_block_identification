@@ -4,6 +4,8 @@ import pickle
 from tkinter import N
 from tkinter.messagebox import NO
 from typing import List, Dict, Tuple, Optional
+
+from matplotlib import blocking_input
 import pyverilog
 from pyverilog.vparser.parser import parse
 from parse_cell_lib import CellInfo
@@ -551,19 +553,19 @@ class DcParser:
         print(block_outputs)
         # label the nodes
         num_count = 0
-        for n in nodes:
-            n[1]['is_input'] = n[1].get('is_input',False)
-            n[1]['is_output'] = n[1].get('is_output',False)
-            if n[0] in block_inputs:
-                n[1]["is_input"] = True
-            else:
-                n[1]["is_input"] = False
-            if  n[0] in block_outputs: 
-                n[1]["is_output"] = True
-                num_count += 1
-            else:
-                n[1]['is_output'] = False
-            
+        # for n in nodes:
+        #     n[1]['is_input'] = n[1].get('is_input',False)
+        #     n[1]['is_output'] = n[1].get('is_output',False)
+        #     if n[0] in block_inputs:
+        #         n[1]["is_input"] = True
+        #     else:
+        #         n[1]["is_input"] = False
+        #     if  n[0] in block_outputs: 
+        #         n[1]["is_output"] = True
+        #         num_count += 1
+        #     else:
+        #         n[1]['is_output'] = False
+
         print(num_count)
         count = 0
         nds = []
@@ -576,7 +578,7 @@ class DcParser:
         print('count',count)
         #print(self.cell_types)
         print(self.ntypes)
-        return nodes, edges
+        return nodes, edges,block_inputs,block_outputs
 
     def parse(self,vfile_pair,hier_report):
         R"""
@@ -592,7 +594,7 @@ class DcParser:
         print('--- Start parsing the netlist...')
         hier_vf, nonhier_vf = vfile_pair[0], vfile_pair[1]
         dp_target_blocks = self.parse_report(hier_report)
-        nodes, edges = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks)
+        nodes, edges,block_inputs,block_outputs = self.parse_nonhier(nonhier_vf, dp_target_blocks=dp_target_blocks)
         print('--- Parsing is done!')
-        return nodes,edges
+        return nodes,edges,block_inputs,block_outputs
 

@@ -30,7 +30,7 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     # gate types
 
-    nodes, edges = parser.parse(vfile_pair,hier_report)
+    nodes, edges,block_inputs,block_outputs = parser.parse(vfile_pair,hier_report)
     print('#node: {}, #edges:{}'.format(len(nodes),len(edges)))
     
     ctype2id = {
@@ -67,15 +67,18 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     # collect the label information
     print('\tlabel the nodes')
-    count = 0
+    count1 = 0
+    count2 = 0
     for n in nodes:
         nid = node2id[n[0]]
-        is_input[nid][0] = n[1]["is_input"]
-        is_output[nid][0] = n[1]["is_output"]
-        if n[1]["is_output"]:
-            count += 1
-    print('count',count)
-
+        if n[0] in block_inputs:
+            is_input[nid][0] = 1
+            count1 += 1
+        if n[0] in block_outputs:     
+            is_output[nid][0] =1
+            count2 += 1
+    print('count',count1)
+    print('count2',count2)
 
     print('\tgenerate type-relative initial features')
     # collect the node type information
@@ -83,7 +86,6 @@ def parse_single_file(parser,vfile_pair,hier_report):
     for n in nodes:
         nid = node2id[n[0]]
         ntype[nid][ctype2id[n[1]["type"]]] = 1
-
 
     src_nodes = []
     dst_nodes = []
