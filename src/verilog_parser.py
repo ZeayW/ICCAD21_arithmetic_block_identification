@@ -550,7 +550,7 @@ class DcParser:
                 nodes.append((src, {"type": "PI"}))
                 pis[src] = True
         print("Adding node labels...")
-        print(block_outputs)
+        #print(block_outputs)
         # label the nodes
         num_count = 0
         # for n in nodes:
@@ -566,16 +566,13 @@ class DcParser:
         #     else:
         #         n[1]['is_output'] = False
 
-        print(num_count)
         count = 0
-        nds = []
-        for n in nodes:
-            if n[1]["is_output"] is True:
-                count += 1
-                nds.append(n[0])
-        print(nds)
-        print(len(set(nds)))
-        print('count',count)
+
+        # for n in nodes:
+        #     if n[1]["is_output"] is True:
+        #         count += 1
+        #         nds.append(n[0])
+      
         #print(self.cell_types)
         print(self.ntypes)
         return nodes, edges,block_inputs,block_outputs
