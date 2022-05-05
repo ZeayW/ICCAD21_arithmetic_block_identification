@@ -67,11 +67,14 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     # collect the label information
     print('\tlabel the nodes')
+    count = 0
     for n in nodes:
         nid = node2id[n[0]]
         is_input[nid][0] = n[1]["is_input"]
         is_output[nid][0] = n[1]["is_output"]
-
+        if n[1]["is_output"]:
+            count += 1
+    print('count',count)
 
 
     print('\tgenerate type-relative initial features')
@@ -102,6 +105,8 @@ def parse_single_file(parser,vfile_pair,hier_report):
     graph.ndata['label_i'] = is_input
     graph.ndata['label_o'] = is_output
 
+    labels = graph.ndata['label_o']
+    print(len(labels),len(labels[labels.squeeze(-1)==1]),len(labels[labels.squeeze(-1)==0]))
     graph.edata["r"] = th.FloatTensor(is_reverted)
 
     print('--- Transforming is done!')

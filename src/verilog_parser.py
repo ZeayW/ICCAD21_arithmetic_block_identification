@@ -535,6 +535,7 @@ class DcParser:
             flush=True,
         )
         print("#nodes:{}, #edges:{}".format(len(nodes),len(edges)))
+
         print("Connecting PIs...")
         # add the edges that connect PIs
         gate_names = set([n[0] for n in nodes])
@@ -548,9 +549,26 @@ class DcParser:
                 pis[src] = True
         print("Adding node labels...")
         # label the nodes
+        num_count = 0
         for n in nodes:
-            n[1]["is_input"] = n[0] in block_inputs
-            n[1]["is_output"] = n[0] in block_outputs
+            n[1]['is_input'] = n[1].get('is_input',False)
+            n[1]['is_output'] = n[1].get('is_output',False)
+            if n[0] in block_inputs:
+                n[1]["is_input"] = True
+            else:
+                n[1]["is_input"] = False
+            if  n[0] in block_outputs: 
+                n[1]["is_output"] = True
+                num_count += 1
+            else:
+                n[1]['is_output'] = False
+            
+        print(num_count)
+        count = 0
+        for n in nodes:
+            if n[1]["is_output"] is True:
+                count += 1
+        print('count',count)
         #print(self.cell_types)
         print(self.ntypes)
         return nodes, edges
