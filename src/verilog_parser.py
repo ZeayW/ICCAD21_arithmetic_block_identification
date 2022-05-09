@@ -436,8 +436,7 @@ class DcParser:
                 idx = re.search('((D|X)\d+\w*COT)', cell_name)
             if idx is None:
                 print(cell_name)
-                if 'SRAM' in cell_name:
-                    continue
+                continue
 
             # if cell_name.startswith('MUX'):
             #     idx = re.search('MUX\d+', cell_name)
