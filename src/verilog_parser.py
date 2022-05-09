@@ -460,6 +460,7 @@ class DcParser:
             if cell_info is None and seq_cell_info_map.get(cell_name,None) is not None:
                 continue
                 #continue
+            
             assert cell_info is not None, 'Cell {} does not exist in the cell libarary!'.format(mcell)
             output_ports = list(cell_info.outputs.keys())
             #print(mcell,cell_name,output_ports)
@@ -493,7 +494,8 @@ class DcParser:
             if not fanouts:
                 item.show()
                 print("***** warning, the above gate has no fanout recognized! *****")
-                assert False
+                
+                #assert False
                 # do not assert, because some gates indeed have no fanout...
                 # assert False, "no fanout recognized"
 
