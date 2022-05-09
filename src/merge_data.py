@@ -5,7 +5,7 @@ import argparse
 
 def get_options(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--files ',nargs='+',type=str)
+    parser.add_argument('--files',nargs='+',type=str)
     options = parser.parse_args(args)
 
     return options
