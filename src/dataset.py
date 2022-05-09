@@ -98,7 +98,7 @@ def parse_single_file(parser,vfile_pair,hier_report):
 
     # create the graph
     graph = dgl.graph(
-        (th.tensor(src_nodes,dthpe=th.int64), th.tensor(dst_nodes,dtype=th.int64)), num_nodes=len(node2id)
+        (th.tensor(src_nodes,dtype=th.int64), th.tensor(dst_nodes,dtype=th.int64)), num_nodes=len(node2id)
     )
 
     graph.ndata["ntype"] = ntype
